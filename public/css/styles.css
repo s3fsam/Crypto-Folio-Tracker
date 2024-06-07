@@ -12,6 +12,42 @@ header {
   text-align: center;
 }
 
+nav {
+  background: #ddd;
+  padding: 10px;
+}
+
+.tabs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+}
+
+.tabs .tab-link {
+  background: #ccc;
+  padding: 10px 20px;
+  margin-right: 5px;
+  cursor: pointer;
+}
+
+.tabs .tab-link.current {
+  background: #333;
+  color: #fff;
+}
+
+.tab-content {
+  display: none;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-top: none;
+}
+
+.tab-content.current {
+  display: block;
+}
+
 main {
   padding: 20px;
 }

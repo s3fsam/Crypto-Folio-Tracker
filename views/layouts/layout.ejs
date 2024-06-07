@@ -8,8 +8,32 @@
   <header>
     <h1>Crypto Portfolio Tracker</h1>
   </header>
+  <nav>
+    <ul class="tabs">
+      <li class="tab-link current" data-tab="tab-1">Prices</li>
+      <li class="tab-link" data-tab="tab-2">Tab 2</li>
+      <li class="tab-link" data-tab="tab-3">Tab 3</li>
+      <li class="tab-link" data-tab="tab-4">Tab 4</li>
+      <li class="tab-link" data-tab="tab-5">Tab 5</li>
+    </ul>
+  </nav>
   <main>
-    <%- content %>
+    <div id="tab-1" class="tab-content current">
+      <%- content %>
+    </div>
+    <div id="tab-2" class="tab-content">
+      <h2>Tab 2 Content</h2>
+    </div>
+    <div id="tab-3" class="tab-content">
+      <h2>Tab 3 Content</h2>
+    </div>
+    <div id="tab-4" class="tab-content">
+      <h2>Tab 4 Content</h2>
+    </div>
+    <div id="tab-5" class="tab-content">
+      <h2>Tab 5 Content</h2>
+    </div>
   </main>
+  <script src="/js/tabs.js"></script>
 </body>
 </html>
