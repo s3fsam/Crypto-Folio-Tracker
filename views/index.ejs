@@ -1,2 +1,24 @@
-<h1>Welcome to Crypto Portfolio Tracker</h1>
-<a href="/scraper/update/bitcoin">Update Bitcoin Prices</a>
+<h2>Cryptocurrency Prices</h2>
+<div id="crypto-prices">
+  <!-- Les prix des cryptomonnaies seront affichés ici -->
+</div>
+<script>
+  fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd')
+    .then(response => response.json())
+    .then(data => {
+      const bitcoinPrice = data.bitcoin.usd;
+      const ethereumPrice = data.ethereum.usd;
+      document.getElementById('crypto-prices').innerHTML = `
+        <p>Bitcoin Price: $${bitcoinPrice}</p>
+        <p>Ethereum Price: $${ethereumPrice}</p>
+      `;
+    })
+    .catch(error => console.error('Error fetching crypto prices:', error));
+</script>
+
+<h3>Select a Cryptocurrency</h3>
+<select id="crypto-list">
+  <% cryptos.forEach(function(crypto) { %>
+    <option value="<%= crypto.id %>"><%= crypto.name %></option>
+  <% }); %>
+</select>

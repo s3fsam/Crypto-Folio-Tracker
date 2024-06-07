@@ -40,9 +40,16 @@ app.get('/prices', async (req, res) => {
 });
 
 // Définir la route par défaut
-app.get('/', (req, res) => {
-  res.redirect('/prices');
-});
+//app.get('/', (req, res) => {
+//  res.redirect('/prices');
+//});
+
+// Définir les routes
+const indexRouter = require('./routes/index');
+const scraperRouter = require('./routes/scraper');
+
+app.use('/', indexRouter);
+app.use('/scraper', scraperRouter);
 
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
