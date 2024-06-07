@@ -39,6 +39,19 @@ app.get('/prices', async (req, res) => {
   }
 });
 
+// Ajouter une nouvelle route pour rafraîchir les cryptomonnaies
+app.get('/refresh-cryptocurrencies', async (req, res) => {
+  try {
+    // Ici, vous pouvez insérer le code pour récupérer les nouvelles données de Coingecko et les intégrer dans la base de données de manière différentielle
+    // Par exemple, vous pouvez comparer les nouvelles données avec les données existantes dans la base de données et mettre à jour uniquement les entrées qui ont changé
+    // Une fois le rafraîchissement terminé, vous pouvez renvoyer une réponse appropriée
+    res.status(200).send('Cryptocurrencies refreshed successfully!');
+  } catch (error) {
+    console.error('Error refreshing cryptocurrencies:', error);
+    res.status(500).send('An error occurred while refreshing cryptocurrencies.');
+  }
+});
+
 // Définir la route par défaut
 //app.get('/', (req, res) => {
 //  res.redirect('/prices');
