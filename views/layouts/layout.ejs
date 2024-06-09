@@ -3,6 +3,7 @@
 <head>
   <title><%= title %></title>
   <link rel="stylesheet" href="/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="/js/main.js" defer></script>
 </head>
 <body>
@@ -31,6 +32,9 @@
         <% }); %>
       </select>
       <button id="refresh-cryptocurrencies-btn">Refresh Cryptocurrencies</button>
+
+      <!-- Canvas for Chart.js -->
+      <canvas id="crypto-chart" width="400" height="200"></canvas>
     </div>
     <div id="tab-2" class="tab-content">
       <h2>Tab 2 Content</h2>
