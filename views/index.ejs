@@ -2,6 +2,7 @@
 <div id="crypto-prices">
   <!-- Les prix des cryptomonnaies seront affichés ici -->
 </div>
+<button id="download-button">Download Cryptocurrencies</button> <!-- Bouton de téléchargement -->
 <button id="refresh-button">Refresh Cryptocurrencies</button> <!-- Bouton de rafraîchissement -->
 <script>
   fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd')
@@ -16,8 +17,22 @@
     })
     .catch(error => console.error('Error fetching crypto prices:', error));
 
+  document.getElementById('download-button').addEventListener('click', () => {
+    fetch('/download-cryptocurrencies')
+      .then(response => {
+        if (response.ok) {
+          alert('Cryptocurrencies downloaded successfully!');
+        } else {
+          alert('Failed to download cryptocurrencies. Please try again later.');
+        }
+      })
+      .catch(error => {
+        console.error('Error downloading cryptocurrencies:', error);
+        alert('An error occurred while downloading cryptocurrencies. Please try again later.');
+      });
+  });
+
   document.getElementById('refresh-button').addEventListener('click', () => {
-    // Appeler la route d'API pour rafraîchir les cryptomonnaies dans la base de données
     fetch('/refresh-cryptocurrencies')
       .then(response => {
         if (response.ok) {

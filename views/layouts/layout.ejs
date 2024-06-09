@@ -3,6 +3,7 @@
 <head>
   <title><%= title %></title>
   <link rel="stylesheet" href="/css/styles.css">
+  <script src="/js/main.js" defer></script>
 </head>
 <body>
   <header>
@@ -19,7 +20,17 @@
   </nav>
   <main>
     <div id="tab-1" class="tab-content current">
-      <%- content %>
+      <h2>Cryptocurrency Prices</h2>
+      <p>Bitcoin Price: $<%= bitcoinPrice %></p>
+      <p>Ethereum Price: $<%= ethereumPrice %></p>
+
+      <h3>Select a Cryptocurrency</h3>
+      <select id="crypto-dropdown">
+        <% cryptos.forEach(function(crypto) { %>
+          <option value="<%= crypto.id %>"><%= crypto.name %></option>
+        <% }); %>
+      </select>
+      <button id="refresh-cryptocurrencies-btn">Refresh Cryptocurrencies</button>
     </div>
     <div id="tab-2" class="tab-content">
       <h2>Tab 2 Content</h2>
