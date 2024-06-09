@@ -51,3 +51,12 @@ nav {
 main {
   padding: 20px;
 }
+
+#crypto-chart {
+  /*
+  max-width: 80% !important;
+  height: 10% !important;
+  */
+  width: 1700px !important;
+  height: 400px !important;
+}
