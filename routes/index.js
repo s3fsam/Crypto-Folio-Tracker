@@ -1,36 +1,50 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List'); // Assurez-vous d'importer correctement votre modèle MongoDB
 
-// Fonction pour récupérer le solde depuis une URL de l'explorateur de blocs avec deux délimiteurs
+// Fonction pour récupérer le solde avec Cheerio
 const getBalanceFromExplorer = async (url, delimiterStart, delimiterEnd) => {
   try {
     console.log(`🔍 Fetching balance from: ${url}`);
 
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' } // Simule un vrai navigateur
+    });
+
     const data = response.data;
+    console.log('🔎 HTML reçu (aperçu):\n', data.substring(0, 500));
 
     if (!data || typeof data !== 'string') {
       throw new Error('Invalid response data');
     }
 
-    // Trouver le texte entre les deux délimiteurs
-    const startIndex = data.indexOf(delimiterStart) + delimiterStart.length;
-    const endIndex = data.indexOf(delimiterEnd, startIndex);
+    // Charger le HTML avec Cheerio
+    const $ = cheerio.load(data);
 
-    if (startIndex < delimiterStart.length || endIndex === -1) {
-      throw new Error(`Failed to locate balance using delimiters: '${delimiterStart}', '${delimiterEnd}'`);
+    // Vérifier si le délimiteur de début est un sélecteur CSS
+    let balanceText;
+    if (delimiterStart.startsWith('<') && delimiterStart.includes('class')) {
+      balanceText = $(delimiterStart).text();
+    } else {
+      // Recherche basique avec indexOf() si pas un sélecteur CSS
+      const startIndex = data.indexOf(delimiterStart) + delimiterStart.length;
+      const endIndex = data.indexOf(delimiterEnd, startIndex);
+      
+      if (startIndex < delimiterStart.length || endIndex === -1) {
+        throw new Error(`⚠️ Failed to locate balance using delimiters: '${delimiterStart}', '${delimiterEnd}'`);
+      }
+
+      balanceText = data.substring(startIndex, endIndex).trim();
     }
 
-    const balanceText = data.substring(startIndex, endIndex).trim();
-
-    // Extraire les chiffres de balanceText
+    // Extraire uniquement les nombres
     const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
     if (isNaN(balance)) {
-      throw new Error(`Balance extraction failed. Raw text: '${balanceText}'`);
+      throw new Error(`⚠️ Balance extraction failed. Raw text: '${balanceText}'`);
     }
 
     console.log(`✅ Balance extracted: ${balance}`);
@@ -41,7 +55,49 @@ const getBalanceFromExplorer = async (url, delimiterStart, delimiterEnd) => {
   }
 };
 
-// Route pour ajouter une nouvelle adresse crypto et récupérer le solde
+// Fonction alternative avec Puppeteer (si Axios & Cheerio ne fonctionnent pas)
+const getBalanceWithPuppeteer = async (url, delimiterStart, delimiterEnd) => {
+  try {
+    console.log(`🔍 Fetching balance dynamically from: ${url}`);
+
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2' });
+
+    const htmlContent = await page.content();
+    console.log('🔎 HTML complet reçu:\n', htmlContent.substring(0, 500));
+
+    const $ = cheerio.load(htmlContent);
+    let balanceText;
+
+    if (delimiterStart.startsWith('<') && delimiterStart.includes('class')) {
+      balanceText = $(delimiterStart).text();
+    } else {
+      const startIndex = htmlContent.indexOf(delimiterStart) + delimiterStart.length;
+      const endIndex = htmlContent.indexOf(delimiterEnd, startIndex);
+      
+      if (startIndex < delimiterStart.length || endIndex === -1) {
+        throw new Error(`⚠️ Failed to locate balance using delimiters: '${delimiterStart}', '${delimiterEnd}'`);
+      }
+
+      balanceText = htmlContent.substring(startIndex, endIndex).trim();
+    }
+
+    const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
+    if (isNaN(balance)) {
+      throw new Error(`⚠️ Balance extraction failed. Raw text: '${balanceText}'`);
+    }
+
+    console.log(`✅ Balance extracted: ${balance}`);
+    await browser.close();
+    return balance;
+  } catch (error) {
+    console.error('❌ Error fetching balance with Puppeteer:', error.message);
+    return { error: 'Failed to fetch balance' };
+  }
+};
+
+// Route pour ajouter une adresse crypto et récupérer son solde
 router.post('/add-crypto-address', async (req, res) => {
   const { crypto, address, delimiterStart, delimiterEnd } = req.body;
 
@@ -51,8 +107,16 @@ router.post('/add-crypto-address', async (req, res) => {
   }
 
   try {
-    const balance = await getBalanceFromExplorer(address, delimiterStart, delimiterEnd);
-    if (balance.error) return res.status(500).json({ error: balance.error });
+    let balance = await getBalanceFromExplorer(address, delimiterStart, delimiterEnd);
+
+    if (balance.error) {
+      console.warn('⚠️ Trying Puppeteer as fallback...');
+      balance = await getBalanceWithPuppeteer(address, delimiterStart, delimiterEnd);
+    }
+
+    if (balance.error) {
+      return res.status(500).json({ error: balance.error });
+    }
 
     const userCrypto = new UserCrypto({ crypto, address, balance });
     await userCrypto.save();
@@ -62,70 +126,6 @@ router.post('/add-crypto-address', async (req, res) => {
   } catch (error) {
     console.error('❌ Error adding crypto address:', error.message);
     res.status(500).json({ error: 'Error adding crypto address' });
-  }
-});
-
-// Route pour mettre à jour la balance d'une cryptomonnaie
-router.post('/add-balance', async (req, res) => {
-  const { crypto, address } = req.body;
-
-  if (!crypto || !address) {
-    console.warn('⚠️ Crypto and address are required');
-    return res.status(400).json({ error: 'Crypto and address are required' });
-  }
-
-  try {
-    const balance = await getBalanceFromExplorer(address);
-    if (balance.error) return res.status(500).json({ error: balance.error });
-
-    const updatedCrypto = await Crypto.findOneAndUpdate(
-      { id: crypto },
-      { balance },
-      { new: true, upsert: true }
-    );
-
-    console.log(`✅ Balance updated for ${crypto}: ${balance}`);
-    res.status(200).json({ message: 'Balance updated successfully', crypto: updatedCrypto });
-  } catch (error) {
-    console.error('❌ Error updating balance:', error.message);
-    res.status(500).json({ error: 'An error occurred while updating balance.' });
-  }
-});
-
-// Route pour rafraîchir la liste des cryptomonnaies
-router.get('/refresh-cryptocurrencies', async (req, res) => {
-  try {
-    console.log('🔄 Refreshing cryptocurrency data...');
-    const newData = await fetchCryptoData();
-    await updateCryptoData(newData);
-    const updatedCryptos = await Crypto.find({}, 'id name');
-
-    console.log(`✅ Successfully refreshed ${updatedCryptos.length} cryptocurrencies.`);
-    res.status(200).json(updatedCryptos);
-  } catch (error) {
-    console.error('❌ Error refreshing cryptocurrencies:', error.message);
-    res.status(500).json({ error: 'An error occurred while refreshing cryptocurrencies.' });
-  }
-});
-
-// Route pour afficher la page d'accueil avec les prix des cryptomonnaies et la liste des cryptos
-router.get('/', async (req, res) => {
-  try {
-    console.log('🔍 Fetching cryptocurrency prices...');
-    const pricesResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
-    const { bitcoin, ethereum } = pricesResponse.data;
-    const cryptos = await Crypto.find({}, 'id name');
-
-    console.log('✅ Successfully fetched cryptocurrency data.');
-    res.render('layouts/layout', {
-      title: 'Home',
-      bitcoinPrice: bitcoin.usd,
-      ethereumPrice: ethereum.usd,
-      cryptos
-    });
-  } catch (error) {
-    console.error('❌ Error fetching data:', error.message);
-    res.status(500).json({ error: 'Error fetching data' });
   }
 });
 
