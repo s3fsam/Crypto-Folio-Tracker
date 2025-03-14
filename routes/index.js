@@ -1,43 +1,72 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const cheerio = require('cheerio');
+const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List'); // Assurez-vous d'importer correctement votre modèle MongoDB
 
-// Fonction pour récupérer les données de Coingecko
-const fetchCryptoData = async () => {
+// Fonction pour récupérer le solde depuis une URL de l'explorateur de blocs avec deux délimiteurs
+const getBalanceFromExplorer = async (url, delimiterStart, delimiterEnd) => {
   try {
-    const response = await axios.get('https://api.coingecko.com/api/v3/coins/list');
-    return response.data;
+    const response = await axios.get(url);
+    const data = response.data;
+
+    // Trouver le texte entre les deux délimiteurs
+    const startIndex = data.indexOf(delimiterStart) + delimiterStart.length;
+    const endIndex = data.indexOf(delimiterEnd, startIndex);
+    const balanceText = data.substring(startIndex, endIndex).trim();
+
+    // Extraire les chiffres de balanceText
+    const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
+    if (isNaN(balance)) {
+      console.error(`Failed to parse balance: '${balanceText}' using delimiters: '${delimiterStart}', '${delimiterEnd}'`);
+      throw new Error('Balance is not a number');
+    }
+    return balance;
   } catch (error) {
-    console.error('Error fetching crypto data:', error);
+    console.error('Error fetching balance:', error);
     throw error;
   }
 };
 
-// Fonction pour comparer et mettre à jour les données dans la base de données
-const updateCryptoData = async (newData) => {
+router.post('/add-balance', async (req, res) => {
+  const { crypto, address } = req.body;
   try {
-    // Insérer ici la logique pour comparer les nouvelles données avec les données existantes dans la base de données et mettre à jour uniquement les entrées qui ont changé
-    console.log('Updating crypto data...');
-    console.log('New data:', newData);
-    // À compléter avec la logique de mise à jour des données dans la base de données
-  } catch (error) {
-    console.error('Error updating crypto data:', error);
-    throw error;
-  }
-};
+    const balance = await getBalanceFromExplorer(address);
 
-// Route pour rafraîchir les cryptomonnaies
+    const updatedCrypto = await Crypto.findOneAndUpdate(
+      { id: crypto },
+      { balance },
+      { new: true, upsert: true }
+    );
+
+    res.status(200).json({ message: 'Balance updated successfully', crypto: updatedCrypto });
+  } catch (error) {
+    console.error('Error updating balance:', error);
+    res.status(500).send('An error occurred while updating balance.');
+  }
+});
+
+// Route pour ajouter une nouvelle adresse crypto
+router.post('/add-crypto-address', async (req, res) => {
+  const { crypto, address, delimiterStart, delimiterEnd } = req.body;
+  try {
+    const balance = await getBalanceFromExplorer(address, delimiterStart, delimiterEnd);
+    const userCrypto = new UserCrypto({ crypto, address, balance });
+    await userCrypto.save();
+    res.status(201).json(userCrypto);
+  } catch (error) {
+    console.error('Error adding crypto address:', error);
+    res.status(500).send('Error adding crypto address');
+  }
+});
+
+// Route pour rafraîchir les cryptomonnaies (existant)
 router.get('/refresh-cryptocurrencies', async (req, res) => {
   try {
-    // Récupérer les nouvelles données de Coingecko
     const newData = await fetchCryptoData();
-    // Mettre à jour les données dans la base de données
     await updateCryptoData(newData);
-
-    // Récupérer la liste mise à jour des cryptomonnaies
     const updatedCryptos = await Crypto.find({}, 'id name');
-
     res.status(200).json(updatedCryptos);
   } catch (error) {
     console.error('Error refreshing cryptocurrencies:', error);
@@ -45,16 +74,12 @@ router.get('/refresh-cryptocurrencies', async (req, res) => {
   }
 });
 
-// Route pour afficher la page d'accueil avec les prix des cryptomonnaies et la liste déroulante des cryptos
+// Route pour afficher la page d'accueil avec les prix des cryptomonnaies et la liste déroulante des cryptos (existant)
 router.get('/', async (req, res) => {
   try {
-    // Récupérer et afficher les prix des cryptomonnaies Bitcoin et Ethereum
     const pricesResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
     const { bitcoin, ethereum } = pricesResponse.data;
-
-    // Récupérer la liste des cryptomonnaies depuis la base de données
     const cryptos = await Crypto.find({}, 'id name');
-
     res.render('layouts/layout', {
       title: 'Home',
       bitcoinPrice: bitcoin.usd,

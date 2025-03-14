@@ -14,6 +14,9 @@ app.set('views', path.join(__dirname, 'views'));
 // Configurer les répertoires statiques
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Middleware pour analyser les requêtes JSON
+app.use(express.json()); // Ajoutez cette ligne
+
 // Connexion à MongoDB
 mongoose.connect('mongodb://127.0.0.1:27017/crypto-portfolio', {
   useNewUrlParser: true,

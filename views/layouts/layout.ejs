@@ -13,7 +13,7 @@
   <nav>
     <ul class="tabs">
       <li class="tab-link current" data-tab="tab-1">Prices</li>
-      <li class="tab-link" data-tab="tab-2">Tab 2</li>
+      <li class="tab-link" data-tab="tab-2">Portfolio</li>
       <li class="tab-link" data-tab="tab-3">Tab 3</li>
       <li class="tab-link" data-tab="tab-4">Tab 4</li>
       <li class="tab-link" data-tab="tab-5">Tab 5</li>
@@ -36,9 +36,50 @@
       <!-- Canvas for Chart.js -->
       <canvas id="crypto-chart" width="400" height="200"></canvas>
     </div>
+
     <div id="tab-2" class="tab-content">
-      <h2>Tab 2 Content</h2>
+      <h2>Ajouter une adresse crypto</h2>
+      <form id="crypto-form">
+        <label for="crypto">Crypto:</label>
+        <input type="text" id="crypto" name="crypto" required>
+
+        <label for="address">Adresse:</label>
+        <input type="text" id="address" name="address" required>
+
+        <label for="delimiterStart">Délimiteur Début:</label>
+        <input type="text" id="delimiterStart" name="delimiterStart" required>
+
+        <label for="delimiterEnd">Délimiteur Fin:</label>
+        <input type="text" id="delimiterEnd" name="delimiterEnd" required>
+
+        <button type="submit">Ajouter</button>
+      </form>
+      <div id="portfolio-balances"></div>
     </div>
+
+    <script>
+      document.getElementById('crypto-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const crypto = document.getElementById('crypto').value;
+        const address = document.getElementById('address').value;
+        const delimiterStart = document.getElementById('delimiterStart').value;
+        const delimiterEnd = document.getElementById('delimiterEnd').value;
+        try {
+          const response = await fetch('/add-crypto-address', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ crypto, address, delimiterStart, delimiterEnd })
+          });
+          const result = await response.json();
+          document.getElementById('portfolio-balances').innerHTML += `<p>${result.crypto}: ${result.balance}</p>`;
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      });
+    </script>
+
     <div id="tab-3" class="tab-content">
       <h2>Tab 3 Content</h2>
     </div>
