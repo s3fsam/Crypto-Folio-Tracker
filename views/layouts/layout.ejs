@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %></title>
   <link rel="stylesheet" href="/css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -60,10 +62,17 @@
     <script>
       document.getElementById('crypto-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const crypto = document.getElementById('crypto').value;
-        const address = document.getElementById('address').value;
-        const delimiterStart = document.getElementById('delimiterStart').value;
-        const delimiterEnd = document.getElementById('delimiterEnd').value;
+        
+        const crypto = document.getElementById('crypto').value.trim();
+        const address = document.getElementById('address').value.trim();
+        const delimiterStart = document.getElementById('delimiterStart').value.trim();
+        const delimiterEnd = document.getElementById('delimiterEnd').value.trim();
+        
+        if (!crypto || !address || !delimiterStart || !delimiterEnd) {
+          alert("Veuillez remplir tous les champs !");
+          return;
+        }
+
         try {
           const response = await fetch('/add-crypto-address', {
             method: 'POST',
@@ -72,10 +81,16 @@
             },
             body: JSON.stringify({ crypto, address, delimiterStart, delimiterEnd })
           });
+
           const result = await response.json();
-          document.getElementById('portfolio-balances').innerHTML += `<p>${result.crypto}: ${result.balance}</p>`;
+          if (result.error) {
+            document.getElementById('portfolio-balances').innerHTML += `<p style="color: red;">Erreur : ${result.error}</p>`;
+          } else {
+            document.getElementById('portfolio-balances').innerHTML += `<p>${result.crypto}: ${result.balance}</p>`;
+          }
         } catch (error) {
-          console.error('Error:', error);
+          console.error('❌ Erreur:', error);
+          alert("Une erreur est survenue. Veuillez réessayer.");
         }
       });
     </script>
