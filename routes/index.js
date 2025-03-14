@@ -121,4 +121,25 @@ router.post('/add-crypto-address', async (req, res) => {
   }
 });
 
+// ✅ **Ajout de la route GET `/` pour corriger "Cannot GET /"**
+router.get('/', async (req, res) => {
+  try {
+    console.log('🔍 Fetching cryptocurrency prices...');
+    const pricesResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
+    const { bitcoin, ethereum } = pricesResponse.data;
+    const cryptos = await Crypto.find({}, 'id name');
+
+    console.log('✅ Successfully fetched cryptocurrency data.');
+    res.render('layouts/layout', {
+      title: 'Home',
+      bitcoinPrice: bitcoin.usd,
+      ethereumPrice: ethereum.usd,
+      cryptos
+    });
+  } catch (error) {
+    console.error('❌ Error fetching data:', error.message);
+    res.status(500).json({ error: 'Error fetching data' });
+  }
+});
+
 module.exports = router;
