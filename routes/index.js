@@ -4,9 +4,6 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
-const path = require('path');
-const os = require('os');
-const fs = require('fs');
 const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List'); // Assurez-vous d'importer correctement votre modèle MongoDB
 
@@ -15,16 +12,15 @@ const getBalanceWithSelenium = async (url) => {
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
 
-    // 📌 Création d'un dossier temporaire unique pour éviter le conflit d'utilisation de session
-    const userDataDir = path.join(os.tmpdir(), `selenium-chrome-${Date.now()}`);
-    fs.mkdirSync(userDataDir, { recursive: true });
-
-    // 📌 Configuration des options Chrome
+    // 📌 Configuration des options Chrome sans `--user-data-dir`
     let options = new chrome.Options();
     options.addArguments('--headless'); // Mode sans interface graphique
     options.addArguments('--no-sandbox'); // Permet de fonctionner sur un serveur sans GUI
-    options.addArguments('--disable-dev-shm-usage'); // Évite les erreurs liées à la mémoire partagée sur Linux
-    options.addArguments(`--user-data-dir=${userDataDir}`); // Assure que Chrome ne se bloque pas à cause d'un dossier en cours d'utilisation
+    options.addArguments('--disable-dev-shm-usage'); // Évite les erreurs mémoire sur Linux
+    options.addArguments('--disable-gpu'); // Désactiver le GPU pour éviter des erreurs sur certains serveurs
+    options.addArguments('--disable-software-rasterizer'); // Empêche Chrome de forcer l'utilisation d'un GPU
+    options.addArguments('--disable-blink-features=AutomationControlled'); // Empêche Chrome de détecter Selenium
+    options.addArguments('--remote-debugging-port=9222'); // Permet à Chrome de ne pas se bloquer
 
     let driver = await new Builder()
       .forBrowser('chrome')
@@ -35,9 +31,9 @@ const getBalanceWithSelenium = async (url) => {
 
     console.log("🔄 Waiting for balance element...");
 
-    // 📌 Attendre que l'élément contenant le solde soit chargé (ajuster le sélecteur si nécessaire)
+    // 📌 Attendre que l'élément contenant le solde soit chargé
     await driver.wait(until.elementLocated(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36')), 10000);
-    
+
     let balanceElement = await driver.findElement(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36'));
     let balanceText = await balanceElement.getText();
 
