@@ -16,7 +16,7 @@ const getBalanceFromExplorer = async (url, delimiterStart, delimiterEnd) => {
     });
 
     const data = response.data;
-    console.log('🔎 HTML reçu (aperçu):\n', data.substring(0, 500));
+    console.log('🔎 HTML reçu (aperçu):\n', data.substring(0, 1000)); // Affiche les 1000 premiers caractères pour analyse
 
     if (!data || typeof data !== 'string') {
       throw new Error('Invalid response data');
@@ -25,29 +25,21 @@ const getBalanceFromExplorer = async (url, delimiterStart, delimiterEnd) => {
     // Charger le HTML avec Cheerio
     const $ = cheerio.load(data);
 
-    // Vérifier si le délimiteur de début est un sélecteur CSS
-    let balanceText;
-    if (delimiterStart.startsWith('<') && delimiterStart.includes('class')) {
-      balanceText = $(delimiterStart).text();
-    } else {
-      // Recherche basique avec indexOf() si pas un sélecteur CSS
-      const startIndex = data.indexOf(delimiterStart) + delimiterStart.length;
-      const endIndex = data.indexOf(delimiterEnd, startIndex);
-      
-      if (startIndex < delimiterStart.length || endIndex === -1) {
-        throw new Error(`⚠️ Failed to locate balance using delimiters: '${delimiterStart}', '${delimiterEnd}'`);
-      }
+    // Sélecteur CSS basé sur la classe exacte
+    const balanceText = $('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36').text().replace('QUBIC', '').trim();
 
-      balanceText = data.substring(startIndex, endIndex).trim();
+    if (!balanceText) {
+      throw new Error(`⚠️ Balance non trouvée. Vérifie si le sélecteur est correct.`);
     }
 
-    // Extraire uniquement les nombres
+    // Extraire uniquement les chiffres
     const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
     if (isNaN(balance)) {
-      throw new Error(`⚠️ Balance extraction failed. Raw text: '${balanceText}'`);
+      console.error(`⚠️ Balance extraction failed. Raw text: '${balanceText}'`);
+      return { error: 'Failed to parse balance' };
     }
 
-    console.log(`✅ Balance extracted: ${balance}`);
+    console.log(`✅ Balance extraite: ${balance}`);
     return balance;
   } catch (error) {
     console.error('❌ Error fetching balance:', error.message);
