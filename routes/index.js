@@ -4,6 +4,9 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
 const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List'); // Assurez-vous d'importer correctement votre modèle MongoDB
 
@@ -12,7 +15,11 @@ const getBalanceWithSelenium = async (url) => {
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
 
-    // 📌 Configuration des options Chrome sans `--user-data-dir`
+    // 📌 Création d'un dossier temporaire unique pour éviter les conflits
+    const userDataDir = path.join(os.tmpdir(), `selenium-chrome-${Date.now()}`);
+    fs.mkdirSync(userDataDir, { recursive: true });
+
+    // 📌 Configuration des options Chrome
     let options = new chrome.Options();
     options.addArguments('--headless'); // Mode sans interface graphique
     options.addArguments('--no-sandbox'); // Permet de fonctionner sur un serveur sans GUI
@@ -21,6 +28,7 @@ const getBalanceWithSelenium = async (url) => {
     options.addArguments('--disable-software-rasterizer'); // Empêche Chrome de forcer l'utilisation d'un GPU
     options.addArguments('--disable-blink-features=AutomationControlled'); // Empêche Chrome de détecter Selenium
     options.addArguments('--remote-debugging-port=9222'); // Permet à Chrome de ne pas se bloquer
+    options.addArguments(`--user-data-dir=${userDataDir}`); // 🔥 Génère un dossier temporaire unique
 
     let driver = await new Builder()
       .forBrowser('chrome')
