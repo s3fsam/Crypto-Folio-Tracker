@@ -7,6 +7,7 @@ const chrome = require('selenium-webdriver/chrome');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const { execSync } = require('child_process'); // Pour tuer les processus Chrome si nécessaire
 const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List'); // Assurez-vous d'importer correctement votre modèle MongoDB
 
@@ -15,8 +16,16 @@ const getBalanceWithSelenium = async (url) => {
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
 
-    // 📌 Création d'un dossier temporaire unique pour éviter les conflits
-    const userDataDir = path.join(os.tmpdir(), `selenium-chrome-${Date.now()}`);
+    // 📌 Vérifier et tuer les processus Chrome s'il y en a déjà qui tournent
+    try {
+      execSync('pkill chrome || pkill chromium || pkill -f chromedriver', { stdio: 'ignore' });
+      console.log('✅ Chrome instances killed successfully.');
+    } catch (e) {
+      console.warn('⚠️ No running Chrome instances found.');
+    }
+
+    // 📌 Création d'un dossier temporaire propre pour Chrome
+    const userDataDir = path.join(os.tmpdir(), `selenium-profile-${Date.now()}`);
     fs.mkdirSync(userDataDir, { recursive: true });
 
     // 📌 Configuration des options Chrome
@@ -29,6 +38,8 @@ const getBalanceWithSelenium = async (url) => {
     options.addArguments('--disable-blink-features=AutomationControlled'); // Empêche Chrome de détecter Selenium
     options.addArguments('--remote-debugging-port=9222'); // Permet à Chrome de ne pas se bloquer
     options.addArguments(`--user-data-dir=${userDataDir}`); // 🔥 Génère un dossier temporaire unique
+    options.addArguments('--no-first-run'); // Empêche Chrome de demander un premier lancement
+    options.addArguments('--disable-extensions'); // Empêche le chargement d'extensions
 
     let driver = await new Builder()
       .forBrowser('chrome')
