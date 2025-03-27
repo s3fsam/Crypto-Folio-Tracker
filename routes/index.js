@@ -131,4 +131,37 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ✅ Récupérer tous les portefeuilles utilisateur
+router.get('/wallets', async (req, res) => {
+  try {
+    const wallets = await UserCrypto.find();
+    res.status(200).json(wallets);
+  } catch (err) {
+    console.error('❌ Erreur récupération portefeuilles:', err.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ✅ Rafraîchir le solde d’un portefeuille
+router.post('/refresh-wallet-balance', async (req, res) => {
+  const { address } = req.body;
+  try {
+    const wallet = await UserCrypto.findOne({ address });
+    if (!wallet) return res.status(404).json({ error: 'Portefeuille introuvable' });
+
+    const balance = wallet.delimiterStart && wallet.delimiterEnd
+      ? await getBalanceFromDelimiters(wallet.address, wallet.delimiterStart, wallet.delimiterEnd)
+      : await getBalanceWithSelenium(wallet.address);
+
+    if (balance.error) return res.status(500).json({ error: balance.error });
+
+    wallet.balance = balance;
+    await wallet.save();
+    res.status(200).json(wallet);
+  } catch (err) {
+    console.error('❌ Erreur mise à jour solde:', err.message);
+    res.status(500).json({ error: 'Erreur mise à jour' });
+  }
+});
+
 module.exports = router;
