@@ -59,10 +59,12 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
     const response = await axios.get(url);
     const data = response.data;
 
-    const startIndex = data.indexOf(delimiterStart) + delimiterStart.length;
-    const endIndex = data.indexOf(delimiterEnd, startIndex);
-    const balanceText = data.substring(startIndex, endIndex).trim();
+    const startIndex = data.indexOf(delimiterStart);
+    if (startIndex === -1) throw new Error(`Délimiteur de début introuvable.`);
+    const endIndex = data.indexOf(delimiterEnd, startIndex + delimiterStart.length);
+    if (endIndex === -1) throw new Error(`Délimiteur de fin introuvable.`);
 
+    const balanceText = data.substring(startIndex + delimiterStart.length, endIndex).trim();
     const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
     if (isNaN(balance)) throw new Error(`⚠️ Balance extraction failed. Raw: '${balanceText}'`);
     return balance;
@@ -83,7 +85,7 @@ router.post('/add-crypto-address', async (req, res) => {
   try {
     let balance;
 
-    if (delimiterStart && delimiterEnd) {
+    if (delimiterStart?.trim() && delimiterEnd?.trim()) {
       balance = await getBalanceFromDelimiters(address, delimiterStart, delimiterEnd);
     } else {
       balance = await getBalanceWithSelenium(address);
@@ -91,9 +93,15 @@ router.post('/add-crypto-address', async (req, res) => {
 
     if (balance.error) return res.status(500).json({ error: balance.error });
 
-    const userCrypto = new UserCrypto({ crypto, address, balance, delimiterStart, delimiterEnd });
-    await userCrypto.save();
+    const userCrypto = new UserCrypto({
+      crypto,
+      address,
+      balance,
+      delimiterStart: delimiterStart || undefined,
+      delimiterEnd: delimiterEnd || undefined
+    });
 
+    await userCrypto.save();
     console.log(`✅ Crypto address added: ${crypto} - ${address}`);
     res.status(201).json(userCrypto);
   } catch (error) {
