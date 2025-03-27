@@ -155,3 +155,37 @@ document.addEventListener('DOMContentLoaded', function () {
   // Charger les soldes au chargement de la page
   fetchBalances();
 });
+
+
+
+async function loadWallets() {
+  const walletsList = document.getElementById('wallets-list');
+  walletsList.innerHTML = '';
+  const response = await fetch('/wallets');
+  const wallets = await response.json();
+
+  wallets.forEach(wallet => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <strong>${wallet.crypto}</strong> (${wallet.address}) :
+      ${wallet.balance} <button onclick="refreshWallet('${wallet.address}')">🔄</button>
+    `;
+    walletsList.appendChild(li);
+  });
+}
+
+async function refreshWallet(address) {
+  const res = await fetch('/refresh-wallet-balance', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address })
+  });
+  if (res.ok) {
+    alert("✅ Solde mis à jour !");
+    loadWallets();
+  } else {
+    alert("❌ Erreur lors du rafraîchissement !");
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadWallets);
