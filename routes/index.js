@@ -7,16 +7,14 @@ const chrome = require('selenium-webdriver/chrome');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const { execSync } = require('child_process'); // Pour tuer les processus Chrome si nécessaire
+const { execSync } = require('child_process');
 const UserCrypto = require('../models/User_Crypto');
-const Crypto = require('../models/Crypto_List'); // Assurez-vous d'importer correctement votre modèle MongoDB
+const Crypto = require('../models/Crypto_List');
 
-// ✅ Fonction avec Selenium pour récupérer le solde
+// ✅ Fonction Selenium
 const getBalanceWithSelenium = async (url) => {
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
-
-    // 📌 Vérifier et tuer les processus Chrome s'il y en a déjà qui tournent
     try {
       execSync('pkill chrome || pkill chromium || pkill -f chromedriver', { stdio: 'ignore' });
       console.log('✅ Chrome instances killed successfully.');
@@ -24,49 +22,28 @@ const getBalanceWithSelenium = async (url) => {
       console.warn('⚠️ No running Chrome instances found.');
     }
 
-    // 📌 Création d'un dossier temporaire propre pour Chrome
     const userDataDir = path.join(os.tmpdir(), `selenium-profile-${Date.now()}`);
     fs.mkdirSync(userDataDir, { recursive: true });
 
-    // 📌 Configuration des options Chrome
     let options = new chrome.Options();
-    options.addArguments('--headless'); // Mode sans interface graphique
-    options.addArguments('--no-sandbox'); // Permet de fonctionner sur un serveur sans GUI
-    options.addArguments('--disable-dev-shm-usage'); // Évite les erreurs mémoire sur Linux
-    options.addArguments('--disable-gpu'); // Désactiver le GPU pour éviter des erreurs sur certains serveurs
-    options.addArguments('--disable-software-rasterizer'); // Empêche Chrome de forcer l'utilisation d'un GPU
-    options.addArguments('--disable-blink-features=AutomationControlled'); // Empêche Chrome de détecter Selenium
-    options.addArguments('--remote-debugging-port=9222'); // Permet à Chrome de ne pas se bloquer
-    options.addArguments(`--user-data-dir=${userDataDir}`); // 🔥 Génère un dossier temporaire unique
-    options.addArguments('--no-first-run'); // Empêche Chrome de demander un premier lancement
-    options.addArguments('--disable-extensions'); // Empêche le chargement d'extensions
+    options.addArguments('--headless', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
+      '--disable-software-rasterizer', '--disable-blink-features=AutomationControlled',
+      '--remote-debugging-port=9222', `--user-data-dir=${userDataDir}`, '--no-first-run', '--disable-extensions');
 
-    let driver = await new Builder()
+    const driver = await new Builder()
       .forBrowser('chrome')
       .setChromeOptions(options)
       .build();
 
     await driver.get(url);
-
-    console.log("🔄 Waiting for balance element...");
-
-    // 📌 Attendre que l'élément contenant le solde soit chargé
     await driver.wait(until.elementLocated(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36')), 10000);
-
-    let balanceElement = await driver.findElement(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36'));
-    let balanceText = await balanceElement.getText();
-
+    const balanceElement = await driver.findElement(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36'));
+    const balanceText = await balanceElement.getText();
     await driver.quit();
 
-    if (!balanceText) {
-      throw new Error(`⚠️ Balance non trouvée.`);
-    }
-
-    // 📌 Extraire uniquement les chiffres du solde
+    if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
     const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
-    if (isNaN(balance)) {
-      throw new Error(`⚠️ Balance extraction failed. Raw text: '${balanceText}'`);
-    }
+    if (isNaN(balance)) throw new Error(`⚠️ Balance extraction failed. Raw text: '${balanceText}'`);
 
     console.log(`✅ Balance extraite: ${balance}`);
     return balance;
@@ -76,23 +53,45 @@ const getBalanceWithSelenium = async (url) => {
   }
 };
 
-// ✅ Route pour ajouter une adresse crypto et récupérer son solde
+// ✅ Méthode alternative avec parsing HTML
+const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
+  try {
+    const response = await axios.get(url);
+    const data = response.data;
+
+    const startIndex = data.indexOf(delimiterStart) + delimiterStart.length;
+    const endIndex = data.indexOf(delimiterEnd, startIndex);
+    const balanceText = data.substring(startIndex, endIndex).trim();
+
+    const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
+    if (isNaN(balance)) throw new Error(`⚠️ Balance extraction failed. Raw: '${balanceText}'`);
+    return balance;
+  } catch (error) {
+    console.error('❌ Error fetching balance with delimiters:', error.message);
+    return { error: 'Failed to fetch balance with delimiters' };
+  }
+};
+
+// ✅ Route POST pour ajouter une adresse crypto
 router.post('/add-crypto-address', async (req, res) => {
-  const { crypto, address } = req.body;
+  const { crypto, address, delimiterStart, delimiterEnd } = req.body;
 
   if (!crypto || !address) {
-    console.warn('⚠️ Missing required fields');
     return res.status(400).json({ error: 'Crypto and address are required' });
   }
 
   try {
-    let balance = await getBalanceWithSelenium(address);
+    let balance;
 
-    if (balance.error) {
-      return res.status(500).json({ error: balance.error });
+    if (delimiterStart && delimiterEnd) {
+      balance = await getBalanceFromDelimiters(address, delimiterStart, delimiterEnd);
+    } else {
+      balance = await getBalanceWithSelenium(address);
     }
 
-    const userCrypto = new UserCrypto({ crypto, address, balance });
+    if (balance.error) return res.status(500).json({ error: balance.error });
+
+    const userCrypto = new UserCrypto({ crypto, address, balance, delimiterStart, delimiterEnd });
     await userCrypto.save();
 
     console.log(`✅ Crypto address added: ${crypto} - ${address}`);
@@ -103,7 +102,7 @@ router.post('/add-crypto-address', async (req, res) => {
   }
 });
 
-// ✅ Route GET `/` pour afficher la page d'accueil
+// ✅ Route GET /
 router.get('/', async (req, res) => {
   try {
     console.log('🔍 Fetching cryptocurrency prices...');
