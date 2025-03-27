@@ -92,38 +92,31 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Gestionnaire d'événement pour le formulaire d'ajout de crypto
-  document.getElementById('crypto-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const crypto = document.getElementById('crypto').value.trim();
-    const address = document.getElementById('address').value.trim();
-    const delimiterStart = document.getElementById('delimiterStart').value.trim();
-    const delimiterEnd = document.getElementById('delimiterEnd').value.trim();
+ document.getElementById('crypto-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const crypto = document.getElementById('crypto').value;
+  const address = document.getElementById('address').value;
+  const delimiterStart = document.getElementById('delimiterStart').value;
+  const delimiterEnd = document.getElementById('delimiterEnd').value;
 
-    if (!crypto || !address || !delimiterStart || !delimiterEnd) {
-      alert("Veuillez remplir tous les champs !");
-      return;
-    }
+  if (!crypto || !address) {
+    alert('Veuillez remplir au moins les champs crypto et adresse !');
+    return;
+  }
 
-    try {
-      const response = await fetch('/add-crypto-address', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ crypto, address, delimiterStart, delimiterEnd })
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        alert('✅ Adresse crypto ajoutée avec succès!');
-        document.getElementById('portfolio-balances').innerHTML += `<p>${result.crypto}: ${result.balance}</p>`;
-      } else {
-        alert(`❌ Erreur : ${result.error || 'Erreur inconnue'}`);
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'ajout de l\'adresse crypto:', error.message);
-      alert('Une erreur est survenue, veuillez réessayer.');
-    }
+  const response = await fetch('/add-crypto-address', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ crypto, address, delimiterStart, delimiterEnd })
   });
+
+  const result = await response.json();
+  if (response.ok) {
+    alert('Adresse crypto ajoutée avec succès !');
+  } else {
+    alert(result.error || 'Erreur lors de l\'ajout de l\'adresse crypto');
+  }
+});
 
   // Fonction pour récupérer et afficher les soldes
   async function fetchBalances() {
