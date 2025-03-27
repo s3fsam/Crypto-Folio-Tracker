@@ -5,6 +5,3 @@ const userCryptoSchema = new mongoose.Schema({
   delimiterStart: { type: String }, // plus required
   delimiterEnd: { type: String }    // plus required
 }, { timestamps: true });
-
-
-module.exports = mongoose.model('UserCrypto', userCryptoSchema);
