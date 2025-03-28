@@ -12,6 +12,7 @@
   <header>
     <h1>Crypto Portfolio Tracker</h1>
   </header>
+
   <nav>
     <ul class="tabs">
       <li class="tab-link current" data-tab="tab-1">Prices</li>
@@ -51,10 +52,10 @@
         <input type="text" id="address" name="address" required>
 
         <label for="delimiterStart">Délimiteur Début:</label>
-        <input type="text" id="delimiterStart" name="delimiterStart">
+        <input type="text" id="delimiterStart" name="delimiterStart" required>
 
         <label for="delimiterEnd">Délimiteur Fin:</label>
-        <input type="text" id="delimiterEnd" name="delimiterEnd">
+        <input type="text" id="delimiterEnd" name="delimiterEnd" required>
 
         <button type="submit">Ajouter</button>
       </form>
@@ -67,14 +68,15 @@
             <th>Adresse</th>
             <th>Solde</th>
             <th>Valeur (USD)</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="wallets-list">
-          <!-- Lignes insérées dynamiquement -->
+          <!-- Remplissage dynamique -->
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3" style="text-align:right;"><strong>Total :</strong></td>
+            <td colspan="4" style="text-align:right;"><strong>Total :</strong></td>
             <td><strong id="current-balance">-</strong></td>
           </tr>
         </tfoot>
@@ -82,48 +84,6 @@
 
       <div id="portfolio-balances"></div>
     </div>
-
-    <!-- Script d'ajout -->
-    <script>
-      document.getElementById('crypto-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const crypto = document.getElementById('crypto').value.trim();
-        const address = document.getElementById('address').value.trim();
-        const delimiterStart = document.getElementById('delimiterStart').value.trim();
-        const delimiterEnd = document.getElementById('delimiterEnd').value.trim();
-
-        if (!crypto || !address) {
-          alert("Veuillez remplir tous les champs !");
-          return;
-        }
-
-        try {
-          const response = await fetch('/add-crypto-address', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ crypto, address, delimiterStart, delimiterEnd })
-          });
-
-          const result = await response.json();
-          if (result.error) {
-            document.getElementById('portfolio-balances').innerHTML += `<p style="color: red;">Erreur : ${result.error}</p>`;
-          } else {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-              <td>${result.crypto}</td>
-              <td>${result.address}</td>
-              <td>${result.balance}</td>
-              <td>${(result.usdValue || 0).toFixed(2)} $</td>
-            `;
-            document.getElementById('wallets-list').appendChild(row);
-          }
-        } catch (error) {
-          console.error('❌ Erreur:', error);
-          alert("Une erreur est survenue. Veuillez réessayer.");
-        }
-      });
-    </script>
 
     <!-- Onglets 3 à 5 -->
     <div id="tab-3" class="tab-content">
@@ -136,6 +96,99 @@
       <h2>Tab 5 Content</h2>
     </div>
   </main>
+
+  <script>
+    // Ajouter une nouvelle adresse portefeuille
+    document.getElementById('crypto-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const crypto = document.getElementById('crypto').value.trim();
+      const address = document.getElementById('address').value.trim();
+      const delimiterStart = document.getElementById('delimiterStart').value.trim();
+      const delimiterEnd = document.getElementById('delimiterEnd').value.trim();
+
+      if (!crypto || !address || !delimiterStart || !delimiterEnd) {
+        alert("Veuillez remplir tous les champs !");
+        return;
+      }
+
+      try {
+        const response = await fetch('/add-crypto-address', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ crypto, address, delimiterStart, delimiterEnd })
+        });
+
+        const result = await response.json();
+        if (result.error) {
+          document.getElementById('portfolio-balances').innerHTML += `<p style="color: red;">Erreur : ${result.error}</p>`;
+        } else {
+          alert("✅ Adresse ajoutée !");
+          loadWallets(); // Recharge le tableau
+        }
+      } catch (error) {
+        console.error('❌ Erreur:', error);
+        alert("Une erreur est survenue. Veuillez réessayer.");
+      }
+    });
+
+    // Charger les portefeuilles
+    async function loadWallets() {
+      const walletsList = document.getElementById('wallets-list');
+      const totalBalanceEl = document.getElementById('current-balance');
+      walletsList.innerHTML = '';
+      let total = 0;
+
+      const res = await fetch('/wallets');
+      const wallets = await res.json();
+
+      wallets.forEach(wallet => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${wallet.crypto}</td>
+          <td>${wallet.address}</td>
+          <td>${wallet.balance}</td>
+          <td>${wallet.usdValue || 0}</td>
+          <td>
+            <button onclick="refreshWallet('${wallet.address}')">🔄</button>
+            <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
+          </td>
+        `;
+        total += wallet.usdValue || 0;
+        walletsList.appendChild(row);
+      });
+
+      totalBalanceEl.textContent = total.toFixed(2);
+    }
+
+    async function refreshWallet(address) {
+      const res = await fetch('/refresh-wallet-balance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address })
+      });
+      if (res.ok) {
+        alert("✅ Solde mis à jour !");
+        loadWallets();
+      } else {
+        alert("❌ Erreur lors du rafraîchissement !");
+      }
+    }
+
+    async function deleteWallet(id) {
+      if (!confirm("Supprimer ce portefeuille ?")) return;
+
+      const res = await fetch(`/wallets/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        alert("🗑️ Supprimé !");
+        loadWallets();
+      } else {
+        alert("❌ Erreur lors de la suppression !");
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadWallets);
+  </script>
 
   <script src="/js/tabs.js"></script>
 </body>
