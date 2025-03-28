@@ -34,6 +34,28 @@ const getBalanceWithSelenium = async (url) => {
       '--remote-debugging-port=9222', `--user-data-dir=${userDataDir}`, '--no-first-run', '--disable-extensions'
     );
 
+// Fonction sans selecteur  ?
+const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
+  try {
+    const response = await axios.get(url);
+    const data = response.data;
+
+    const startIndex = data.indexOf(delimiterStart);
+    if (startIndex === -1) throw new Error(`Délimiteur de début introuvable.`);
+    const endIndex = data.indexOf(delimiterEnd, startIndex + delimiterStart.length);
+    if (endIndex === -1) throw new Error(`Délimiteur de fin introuvable.`);
+
+    const balanceText = data.substring(startIndex + delimiterStart.length, endIndex).trim();
+    const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
+    if (isNaN(balance)) throw new Error(`⚠️ Balance extraction failed. Raw: '${balanceText}'`);
+    return balance;
+  } catch (error) {
+    console.error('❌ Error fetching balance with delimiters:', error.message);
+    return { error: 'Failed to fetch balance with delimiters' };
+  }
+};
+
+    
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
     await driver.get(url);
 
