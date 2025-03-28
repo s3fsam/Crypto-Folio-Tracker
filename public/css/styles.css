@@ -83,3 +83,21 @@ main {
   background-color: #f8f8f8;
 }
 
+.wallets-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background-color: white;
+}
+
+.wallets-table th,
+.wallets-table td {
+  border: 2px solid black;
+  padding: 10px;
+  text-align: left;
+}
+
+.wallets-table th {
+  background-color: #e6e6e6;
+}
+
