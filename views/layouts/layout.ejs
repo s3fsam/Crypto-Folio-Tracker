@@ -58,13 +58,29 @@
 
       </form>
 
-      <h3>Mes portefeuilles</h3>
-          <ul id="wallets-list"></ul>
-
-      <h3>Solde actuel :</h3>
-          <p id="current-balance">-</p>
-
-      <div id="portfolio-balances"></div>
+     <h3>Mes portefeuilles</h3>
+     <table id="wallets-table">
+     <thead>
+        <tr>
+          <th>Cryptomonnaie</th>
+          <th>Adresse</th>
+          <th>Solde</th>
+          <th>Valeur (USD)</th>
+        </tr>
+      </thead>
+      <tbody id="wallets-list">
+        <!-- Rempli dynamiquement via JS -->
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3" style="text-align:right"><strong>Total :</strong></td>
+          <td><strong id="current-balance">-</strong></td>
+        </tr>
+      </tfoot>
+    </table>
+    
+    <!-- Message d’état -->
+    <div id="portfolio-balances"></div>
 
     </div>
 
@@ -77,7 +93,7 @@
         const delimiterStart = document.getElementById('delimiterStart').value.trim();
         const delimiterEnd = document.getElementById('delimiterEnd').value.trim();
         
-        if (!crypto || !address || !delimiterStart || !delimiterEnd) {
+        if (!crypto || !address) {
           alert("Veuillez remplir tous les champs !");
           return;
         }
