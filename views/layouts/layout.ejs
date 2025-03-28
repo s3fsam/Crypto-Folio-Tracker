@@ -57,6 +57,9 @@
         <label for="delimiterEnd">Délimiteur Fin:</label>
         <input type="text" id="delimiterEnd" name="delimiterEnd">
 
+        <label for="cssSelector">Sélecteur CSS (optionnel):</label>
+        <input type="text" id="cssSelector" name="cssSelector" placeholder="ex: div.solde span.valeur">
+
         <button type="submit">Ajouter</button>
       </form>
 
@@ -98,7 +101,6 @@
   </main>
 
   <script>
-    // Ajouter une nouvelle adresse portefeuille
     document.getElementById('crypto-form').addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -106,9 +108,10 @@
       const address = document.getElementById('address').value.trim();
       const delimiterStart = document.getElementById('delimiterStart').value.trim();
       const delimiterEnd = document.getElementById('delimiterEnd').value.trim();
+      const cssSelector = document.getElementById('cssSelector').value.trim();
 
-      if (!crypto || !address || !delimiterStart || !delimiterEnd) {
-        alert("Veuillez remplir tous les champs !");
+      if (!crypto || !address) {
+        alert("Veuillez remplir au minimum Crypto et Adresse !");
         return;
       }
 
@@ -116,25 +119,22 @@
         const response = await fetch('/add-crypto-address', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ crypto, address, delimiterStart, delimiterEnd })
+          body: JSON.stringify({ crypto, address, delimiterStart, delimiterEnd, cssSelector })
         });
 
         const result = await response.json();
-if (result.error) {
-  document.getElementById('portfolio-balances').innerHTML += `<p style="color: red;">Erreur : ${result.error}</p>`;
-  return;
-}
-
-alert("✅ Adresse ajoutée !");
-await loadWallets(); // Recharge proprement sans ajouter manuellement
-
+        if (result.error) {
+          document.getElementById('portfolio-balances').innerHTML += `<p style="color: red;">Erreur : ${result.error}</p>`;
+        } else {
+          alert("✅ Adresse ajoutée !");
+          await loadWallets();
+        }
       } catch (error) {
         console.error('❌ Erreur:', error);
-        alert("Une erreur est survenue. Veuillez réessayer.");
+        alert("Une erreur est survenue.");
       }
     });
 
-    // Charger les portefeuilles
     async function loadWallets() {
       const walletsList = document.getElementById('wallets-list');
       const totalBalanceEl = document.getElementById('current-balance');
@@ -188,6 +188,8 @@ await loadWallets(); // Recharge proprement sans ajouter manuellement
         alert("❌ Erreur lors de la suppression !");
       }
     }
+
+    document.addEventListener('DOMContentLoaded', loadWallets);
   </script>
 
   <script src="/js/tabs.js"></script>
