@@ -1,7 +1,5 @@
-// ... les require restent inchangés
-
 const express = require('express');
-const router = express.Router(); // ✅ ← cette ligne manquait
+const router = express.Router();
 
 const axios = require('axios');
 const cheerio = require('cheerio');
@@ -14,27 +12,7 @@ const { execSync } = require('child_process');
 const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List');
 
-// ✅ Fonction Selenium avec sélecteur CSS dynamique
-const getBalanceWithSelenium = async (url) => {
-  try {
-    console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
-    try {
-      execSync('pkill chrome || pkill chromium || pkill -f chromedriver', { stdio: 'ignore' });
-      console.log('✅ Chrome instances killed successfully.');
-    } catch (e) {
-      console.warn('⚠️ No running Chrome instances found.');
-    }
-
-    const userDataDir = path.join(os.tmpdir(), `selenium-profile-${Date.now()}`);
-    fs.mkdirSync(userDataDir, { recursive: true });
-
-    const options = new chrome.Options().addArguments(
-      '--headless', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
-      '--disable-software-rasterizer', '--disable-blink-features=AutomationControlled',
-      '--remote-debugging-port=9222', `--user-data-dir=${userDataDir}`, '--no-first-run', '--disable-extensions'
-    );
-
-// Fonction sans selecteur  ?
+// ✅ Fonction de parsing avec délimiteurs HTML
 const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   try {
     const response = await axios.get(url);
@@ -55,19 +33,37 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   }
 };
 
-    
+// ✅ Fonction Selenium avec fallback dynamique
+const getBalanceWithSelenium = async (url) => {
+  try {
+    console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
+
+    try {
+      execSync('pkill chrome || pkill chromium || pkill -f chromedriver', { stdio: 'ignore' });
+      console.log('✅ Chrome instances killed successfully.');
+    } catch (e) {
+      console.warn('⚠️ No running Chrome instances found.');
+    }
+
+    const userDataDir = path.join(os.tmpdir(), `selenium-profile-${Date.now()}`);
+    fs.mkdirSync(userDataDir, { recursive: true });
+
+    const options = new chrome.Options().addArguments(
+      '--headless', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
+      '--disable-software-rasterizer', '--disable-blink-features=AutomationControlled',
+      '--remote-debugging-port=9222', `--user-data-dir=${userDataDir}`, '--no-first-run', '--disable-extensions'
+    );
+
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
     await driver.get(url);
 
     let balanceText;
 
-    // ⛳ Premier essai avec l'ancien sélecteur
     try {
       await driver.wait(until.elementLocated(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36')), 5000);
       const el = await driver.findElement(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36'));
       balanceText = await el.getText();
     } catch {
-      // 🧩 Deuxième essai : chercher tous les <p> et détecter celui qui contient un nombre
       const paragraphs = await driver.findElements(By.css('p'));
       for (const p of paragraphs) {
         const text = await p.getText();
@@ -93,7 +89,7 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   }
 };
 
-// ✅ POST /add-crypto-address avec cssSelector
+// ✅ Route pour ajouter une adresse crypto
 router.post('/add-crypto-address', async (req, res) => {
   const { crypto, address, delimiterStart, delimiterEnd, cssSelector } = req.body;
 
@@ -130,7 +126,7 @@ router.post('/add-crypto-address', async (req, res) => {
   }
 });
 
-// ✅ Rafraîchir un portefeuille avec support cssSelector
+// ✅ Route pour rafraîchir un portefeuille
 router.post('/refresh-wallet-balance', async (req, res) => {
   const { address } = req.body;
   try {
@@ -152,7 +148,7 @@ router.post('/refresh-wallet-balance', async (req, res) => {
   }
 });
 
-// ✅ Autres routes inchangées
+// ✅ Page d’accueil avec les cryptos
 router.get('/', async (req, res) => {
   try {
     const pricesResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
@@ -171,6 +167,7 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ✅ Récupérer tous les portefeuilles
 router.get('/wallets', async (req, res) => {
   try {
     const wallets = await UserCrypto.find();
@@ -181,6 +178,7 @@ router.get('/wallets', async (req, res) => {
   }
 });
 
+// ✅ Supprimer un portefeuille
 router.delete('/wallets/:id', async (req, res) => {
   try {
     await UserCrypto.findByIdAndDelete(req.params.id);
