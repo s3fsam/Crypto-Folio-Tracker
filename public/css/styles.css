@@ -60,3 +60,26 @@ main {
   width: 1700px !important;
   height: 400px !important;
 }
+
+#portfolio-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+#portfolio-table th,
+#portfolio-table td {
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+#portfolio-table thead {
+  background-color: #eee;
+}
+
+#portfolio-table tfoot td {
+  font-weight: bold;
+  background-color: #f8f8f8;
+}
+
