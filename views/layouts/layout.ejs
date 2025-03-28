@@ -120,12 +120,14 @@
         });
 
         const result = await response.json();
-        if (result.error) {
-          document.getElementById('portfolio-balances').innerHTML += `<p style="color: red;">Erreur : ${result.error}</p>`;
-        } else {
-          alert("✅ Adresse ajoutée !");
-          loadWallets(); // Recharge le tableau
-        }
+if (result.error) {
+  document.getElementById('portfolio-balances').innerHTML += `<p style="color: red;">Erreur : ${result.error}</p>`;
+  return;
+}
+
+alert("✅ Adresse ajoutée !");
+await loadWallets(); // Recharge proprement sans ajouter manuellement
+
       } catch (error) {
         console.error('❌ Erreur:', error);
         alert("Une erreur est survenue. Veuillez réessayer.");
