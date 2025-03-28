@@ -129,30 +129,42 @@ document.addEventListener('DOMContentLoaded', function () {
     totalBalanceElement.textContent = totalBalance.toFixed(2);
   }
 
-  async function loadWallets() {
-    const walletsBody = document.getElementById('wallets-list');
-    const totalBalanceCell = document.getElementById('current-balance');
-    walletsBody.innerHTML = '';
-    let total = 0;
+async function loadWallets() {
+  const walletsList = document.getElementById('wallets-list');
+  walletsList.innerHTML = '';
+  const response = await fetch('/wallets');
+  const wallets = await response.json();
 
-    const response = await fetch('/wallets');
-    const wallets = await response.json();
+  wallets.forEach(wallet => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${wallet.crypto}</td>
+      <td>${wallet.address}</td>
+      <td>${wallet.balance}</td>
+      <td>${wallet.usdValue}</td>
+      <td>
+        <button onclick="refreshWallet('${wallet.address}')">🔄</button>
+        <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
+      </td>
+    `;
+    walletsList.appendChild(tr);
+  });
+}
 
-    wallets.forEach(wallet => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${wallet.crypto}</td>
-        <td>${wallet.address}</td>
-        <td>${wallet.balance}</td>
-        <td>${wallet.usdValue?.toFixed(2) || 0} $ 
-            <button onclick="refreshWallet('${wallet.address}')">🔄</button></td>
-      `;
-      walletsBody.appendChild(row);
-      total += wallet.usdValue || 0;
-    });
+async function deleteWallet(id) {
+  if (!confirm("Voulez-vous vraiment supprimer ce portefeuille ?")) return;
 
-    totalBalanceCell.textContent = total.toFixed(2);
+  const response = await fetch('/wallets/' + id, {
+    method: 'DELETE'
+  });
+
+  if (response.ok) {
+    alert("✅ Portefeuille supprimé !");
+    loadWallets();
+  } else {
+    alert("❌ Échec de la suppression !");
   }
+}
 
   async function refreshWallet(address) {
     const res = await fetch('/refresh-wallet-balance', {
