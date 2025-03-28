@@ -14,9 +14,8 @@ const { execSync } = require('child_process');
 const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List');
 
-
 // ✅ Fonction Selenium avec sélecteur CSS dynamique
-const getBalanceWithSelenium = async (url, cssSelector) => {
+const getBalanceWithSelenium = async (url) => {
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
     try {
@@ -29,33 +28,46 @@ const getBalanceWithSelenium = async (url, cssSelector) => {
     const userDataDir = path.join(os.tmpdir(), `selenium-profile-${Date.now()}`);
     fs.mkdirSync(userDataDir, { recursive: true });
 
-    let options = new chrome.Options();
-    options.addArguments('--headless', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
+    const options = new chrome.Options().addArguments(
+      '--headless', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
       '--disable-software-rasterizer', '--disable-blink-features=AutomationControlled',
-      '--remote-debugging-port=9222', `--user-data-dir=${userDataDir}`, '--no-first-run', '--disable-extensions');
+      '--remote-debugging-port=9222', `--user-data-dir=${userDataDir}`, '--no-first-run', '--disable-extensions'
+    );
 
-    const driver = await new Builder()
-      .forBrowser('chrome')
-      .setChromeOptions(options)
-      .build();
-
+    const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
     await driver.get(url);
 
-    const selector = cssSelector?.trim() || 'p.w-fit.break-all.font-space.text-2xl.sm\\:text-36';
-    await driver.wait(until.elementLocated(By.css(selector)), 10000);
-    const balanceElement = await driver.findElement(By.css(selector));
-    const balanceText = await balanceElement.getText();
+    let balanceText;
+
+    // ⛳ Premier essai avec l'ancien sélecteur
+    try {
+      await driver.wait(until.elementLocated(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36')), 5000);
+      const el = await driver.findElement(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36'));
+      balanceText = await el.getText();
+    } catch {
+      // 🧩 Deuxième essai : chercher tous les <p> et détecter celui qui contient un nombre
+      const paragraphs = await driver.findElements(By.css('p'));
+      for (const p of paragraphs) {
+        const text = await p.getText();
+        if (text && text.match(/[0-9]{1,3}([.,][0-9]{3})*([.,][0-9]+)?/)) {
+          balanceText = text;
+          console.log('🔄 Balance trouvée dynamiquement dans un <p>: ' + balanceText);
+          break;
+        }
+      }
+    }
+
     await driver.quit();
 
     if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
-    const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
-    if (isNaN(balance)) throw new Error(`⚠️ Balance extraction failed. Raw text: '${balanceText}'`);
+    const clean = parseFloat(balanceText.replace(/[^\d.]/g, ''));
+    if (isNaN(clean)) throw new Error(`⚠️ Échec de parsing du solde: '${balanceText}'`);
 
-    console.log(`✅ Balance extraite: ${balance}`);
-    return balance;
+    console.log(`✅ Balance extraite: ${clean}`);
+    return clean;
   } catch (error) {
     console.error('❌ Error fetching balance with Selenium:', error.message);
-    return { error: 'Failed to fetch balance' };
+    return { error: 'Failed to fetch balance dynamically' };
   }
 };
 
