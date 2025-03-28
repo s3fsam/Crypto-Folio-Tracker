@@ -1,5 +1,20 @@
 // ... les require restent inchangés
 
+const express = require('express');
+const router = express.Router(); // ✅ ← cette ligne manquait
+
+const axios = require('axios');
+const cheerio = require('cheerio');
+const { Builder, By, until } = require('selenium-webdriver');
+const chrome = require('selenium-webdriver/chrome');
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
+const { execSync } = require('child_process');
+const UserCrypto = require('../models/User_Crypto');
+const Crypto = require('../models/Crypto_List');
+
+
 // ✅ Fonction Selenium avec sélecteur CSS dynamique
 const getBalanceWithSelenium = async (url, cssSelector) => {
   try {
