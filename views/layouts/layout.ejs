@@ -21,7 +21,9 @@
       <li class="tab-link" data-tab="tab-5">Tab 5</li>
     </ul>
   </nav>
+
   <main>
+    <!-- Onglet 1 : Prix -->
     <div id="tab-1" class="tab-content current">
       <h2>Cryptocurrency Prices</h2>
       <p>Bitcoin Price: $<%= bitcoinPrice %></p>
@@ -35,10 +37,10 @@
       </select>
       <button id="refresh-cryptocurrencies-btn">Refresh Cryptocurrencies</button>
 
-      <!-- Canvas for Chart.js -->
       <canvas id="crypto-chart" width="400" height="200"></canvas>
     </div>
 
+    <!-- Onglet 2 : Portfolio -->
     <div id="tab-2" class="tab-content">
       <h2>Ajouter une adresse crypto</h2>
       <form id="crypto-form">
@@ -55,44 +57,42 @@
         <input type="text" id="delimiterEnd" name="delimiterEnd">
 
         <button type="submit">Ajouter</button>
-
       </form>
 
-     <h3>Mes portefeuilles</h3>
-     <table id="wallets-table">
-     <thead>
-        <tr>
-          <th>Cryptomonnaie</th>
-          <th>Adresse</th>
-          <th>Solde</th>
-          <th>Valeur (USD)</th>
-        </tr>
-      </thead>
-      <tbody id="wallets-list">
-        <!-- Rempli dynamiquement via JS -->
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colspan="3" style="text-align:right"><strong>Total :</strong></td>
-          <td><strong id="current-balance">-</strong></td>
-        </tr>
-      </tfoot>
-    </table>
-    
-    <!-- Message d’état -->
-    <div id="portfolio-balances"></div>
+      <h3>Mes portefeuilles</h3>
+      <table id="wallets-table" class="wallets-table">
+        <thead>
+          <tr>
+            <th>Cryptomonnaie</th>
+            <th>Adresse</th>
+            <th>Solde</th>
+            <th>Valeur (USD)</th>
+          </tr>
+        </thead>
+        <tbody id="wallets-list">
+          <!-- Lignes insérées dynamiquement -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="text-align:right;"><strong>Total :</strong></td>
+            <td><strong id="current-balance">-</strong></td>
+          </tr>
+        </tfoot>
+      </table>
 
+      <div id="portfolio-balances"></div>
     </div>
 
+    <!-- Script d'ajout -->
     <script>
       document.getElementById('crypto-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const crypto = document.getElementById('crypto').value.trim();
         const address = document.getElementById('address').value.trim();
         const delimiterStart = document.getElementById('delimiterStart').value.trim();
         const delimiterEnd = document.getElementById('delimiterEnd').value.trim();
-        
+
         if (!crypto || !address) {
           alert("Veuillez remplir tous les champs !");
           return;
@@ -101,9 +101,7 @@
         try {
           const response = await fetch('/add-crypto-address', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ crypto, address, delimiterStart, delimiterEnd })
           });
 
@@ -111,7 +109,14 @@
           if (result.error) {
             document.getElementById('portfolio-balances').innerHTML += `<p style="color: red;">Erreur : ${result.error}</p>`;
           } else {
-            document.getElementById('portfolio-balances').innerHTML += `<p>${result.crypto}: ${result.balance}</p>`;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${result.crypto}</td>
+              <td>${result.address}</td>
+              <td>${result.balance}</td>
+              <td>${(result.usdValue || 0).toFixed(2)} $</td>
+            `;
+            document.getElementById('wallets-list').appendChild(row);
           }
         } catch (error) {
           console.error('❌ Erreur:', error);
@@ -120,6 +125,7 @@
       });
     </script>
 
+    <!-- Onglets 3 à 5 -->
     <div id="tab-3" class="tab-content">
       <h2>Tab 3 Content</h2>
     </div>
@@ -130,6 +136,7 @@
       <h2>Tab 5 Content</h2>
     </div>
   </main>
+
   <script src="/js/tabs.js"></script>
 </body>
 </html>
