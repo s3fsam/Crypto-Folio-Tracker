@@ -1,18 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const axios = require('axios');
-const cheerio = require('cheerio');
-const { Builder, By, until } = require('selenium-webdriver');
-const chrome = require('selenium-webdriver/chrome');
-const path = require('path');
-const os = require('os');
-const fs = require('fs');
-const { execSync } = require('child_process');
-const UserCrypto = require('../models/User_Crypto');
-const Crypto = require('../models/Crypto_List');
+// ... les require restent inchangés
 
-// ✅ Fonction Selenium
-const getBalanceWithSelenium = async (url) => {
+// ✅ Fonction Selenium avec sélecteur CSS dynamique
+const getBalanceWithSelenium = async (url, cssSelector) => {
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
     try {
@@ -36,8 +25,10 @@ const getBalanceWithSelenium = async (url) => {
       .build();
 
     await driver.get(url);
-    await driver.wait(until.elementLocated(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36')), 10000);
-    const balanceElement = await driver.findElement(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36'));
+
+    const selector = cssSelector?.trim() || 'p.w-fit.break-all.font-space.text-2xl.sm\\:text-36';
+    await driver.wait(until.elementLocated(By.css(selector)), 10000);
+    const balanceElement = await driver.findElement(By.css(selector));
     const balanceText = await balanceElement.getText();
     await driver.quit();
 
@@ -53,30 +44,9 @@ const getBalanceWithSelenium = async (url) => {
   }
 };
 
-// ✅ Méthode alternative avec parsing HTML
-const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
-  try {
-    const response = await axios.get(url);
-    const data = response.data;
-
-    const startIndex = data.indexOf(delimiterStart);
-    if (startIndex === -1) throw new Error(`Délimiteur de début introuvable.`);
-    const endIndex = data.indexOf(delimiterEnd, startIndex + delimiterStart.length);
-    if (endIndex === -1) throw new Error(`Délimiteur de fin introuvable.`);
-
-    const balanceText = data.substring(startIndex + delimiterStart.length, endIndex).trim();
-    const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
-    if (isNaN(balance)) throw new Error(`⚠️ Balance extraction failed. Raw: '${balanceText}'`);
-    return balance;
-  } catch (error) {
-    console.error('❌ Error fetching balance with delimiters:', error.message);
-    return { error: 'Failed to fetch balance with delimiters' };
-  }
-};
-
-// ✅ Route POST pour ajouter une adresse crypto
+// ✅ POST /add-crypto-address avec cssSelector
 router.post('/add-crypto-address', async (req, res) => {
-  const { crypto, address, delimiterStart, delimiterEnd } = req.body;
+  const { crypto, address, delimiterStart, delimiterEnd, cssSelector } = req.body;
 
   if (!crypto || !address) {
     return res.status(400).json({ error: 'Crypto and address are required' });
@@ -88,7 +58,7 @@ router.post('/add-crypto-address', async (req, res) => {
     if (delimiterStart?.trim() && delimiterEnd?.trim()) {
       balance = await getBalanceFromDelimiters(address, delimiterStart, delimiterEnd);
     } else {
-      balance = await getBalanceWithSelenium(address);
+      balance = await getBalanceWithSelenium(address, cssSelector);
     }
 
     if (balance.error) return res.status(500).json({ error: balance.error });
@@ -98,7 +68,8 @@ router.post('/add-crypto-address', async (req, res) => {
       address,
       balance,
       delimiterStart: delimiterStart || undefined,
-      delimiterEnd: delimiterEnd || undefined
+      delimiterEnd: delimiterEnd || undefined,
+      cssSelector: cssSelector || undefined
     });
 
     await userCrypto.save();
@@ -110,39 +81,7 @@ router.post('/add-crypto-address', async (req, res) => {
   }
 });
 
-// ✅ Route GET /
-router.get('/', async (req, res) => {
-  try {
-    console.log('🔍 Fetching cryptocurrency prices...');
-    const pricesResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
-    const { bitcoin, ethereum } = pricesResponse.data;
-    const cryptos = await Crypto.find({}, 'id name');
-
-    console.log('✅ Successfully fetched cryptocurrency data.');
-    res.render('layouts/layout', {
-      title: 'Home',
-      bitcoinPrice: bitcoin.usd,
-      ethereumPrice: ethereum.usd,
-      cryptos
-    });
-  } catch (error) {
-    console.error('❌ Error fetching data:', error.message);
-    res.status(500).json({ error: 'Error fetching data' });
-  }
-});
-
-// ✅ Récupérer tous les portefeuilles utilisateur
-router.get('/wallets', async (req, res) => {
-  try {
-    const wallets = await UserCrypto.find();
-    res.status(200).json(wallets);
-  } catch (err) {
-    console.error('❌ Erreur récupération portefeuilles:', err.message);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// ✅ Rafraîchir le solde d’un portefeuille
+// ✅ Rafraîchir un portefeuille avec support cssSelector
 router.post('/refresh-wallet-balance', async (req, res) => {
   const { address } = req.body;
   try {
@@ -151,7 +90,7 @@ router.post('/refresh-wallet-balance', async (req, res) => {
 
     const balance = wallet.delimiterStart && wallet.delimiterEnd
       ? await getBalanceFromDelimiters(wallet.address, wallet.delimiterStart, wallet.delimiterEnd)
-      : await getBalanceWithSelenium(wallet.address);
+      : await getBalanceWithSelenium(wallet.address, wallet.cssSelector);
 
     if (balance.error) return res.status(500).json({ error: balance.error });
 
@@ -164,10 +103,38 @@ router.post('/refresh-wallet-balance', async (req, res) => {
   }
 });
 
+// ✅ Autres routes inchangées
+router.get('/', async (req, res) => {
+  try {
+    const pricesResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
+    const { bitcoin, ethereum } = pricesResponse.data;
+    const cryptos = await Crypto.find({}, 'id name');
+
+    res.render('layouts/layout', {
+      title: 'Home',
+      bitcoinPrice: bitcoin.usd,
+      ethereumPrice: ethereum.usd,
+      cryptos
+    });
+  } catch (error) {
+    console.error('❌ Error fetching data:', error.message);
+    res.status(500).json({ error: 'Error fetching data' });
+  }
+});
+
+router.get('/wallets', async (req, res) => {
+  try {
+    const wallets = await UserCrypto.find();
+    res.status(200).json(wallets);
+  } catch (err) {
+    console.error('❌ Erreur récupération portefeuilles:', err.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 router.delete('/wallets/:id', async (req, res) => {
   try {
-    const id = req.params.id;
-    await UserCrypto.findByIdAndDelete(id);
+    await UserCrypto.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: 'Portefeuille supprimé.' });
   } catch (err) {
     console.error('Erreur suppression portefeuille:', err);
