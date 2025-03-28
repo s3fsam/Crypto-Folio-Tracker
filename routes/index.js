@@ -164,4 +164,15 @@ router.post('/refresh-wallet-balance', async (req, res) => {
   }
 });
 
+router.delete('/wallets/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    await UserCrypto.findByIdAndDelete(id);
+    res.status(200).json({ message: 'Portefeuille supprimé.' });
+  } catch (err) {
+    console.error('Erreur suppression portefeuille:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;
