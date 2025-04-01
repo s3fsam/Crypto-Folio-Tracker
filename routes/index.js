@@ -37,8 +37,8 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   }
 };
 
-// ✅ Fonction Selenium avec fallback dynamique + debug HTML
-const getBalanceWithSelenium = async (url, cssSelector) => {
+// ✅ Fonction Selenium avec fallback dynamique + debug HTML + support des délimiteurs
+const getBalanceWithSelenium = async (url, cssSelector, delimiterStart, delimiterEnd) => {
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
 
@@ -61,7 +61,6 @@ const getBalanceWithSelenium = async (url, cssSelector) => {
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
     await driver.get(url);
 
-    // 🔍 Debug HTML complet
     const html = await driver.getPageSource();
     console.log('\n===== 🧪 HTML complet extrait par Selenium (début) =====');
     console.log(html);
@@ -69,18 +68,31 @@ const getBalanceWithSelenium = async (url, cssSelector) => {
 
     let balanceText;
 
-    // ✅ Si sélecteur fourni
     if (cssSelector) {
       try {
         const el = await driver.findElement(By.css(cssSelector));
-        balanceText = await el.getText();
-        console.log(`✅ Balance récupérée avec sélecteur '${cssSelector}': ${balanceText}`);
+        const inner = await el.getAttribute('innerHTML');
+
+        // Si délimiteurs présents
+        if (delimiterStart && delimiterEnd && inner.includes(delimiterStart) && inner.includes(delimiterEnd)) {
+          const startIndex = inner.indexOf(delimiterStart);
+          const endIndex = inner.indexOf(delimiterEnd, startIndex + delimiterStart.length);
+          if (startIndex !== -1 && endIndex !== -1) {
+            balanceText = inner.substring(startIndex + delimiterStart.length, endIndex).trim();
+            console.log(`🔍 Balance trouvée avec CSS + délimiteurs : ${balanceText}`);
+          }
+        }
+
+        // Sinon on tente via getText()
+        if (!balanceText) {
+          balanceText = await el.getText();
+          console.log(`✅ Balance récupérée avec sélecteur CSS : ${balanceText}`);
+        }
       } catch {
-        console.warn(`⚠️ Sélecteur CSS '${cssSelector}' introuvable. Fallback sur <p>`);
+        console.warn(`⚠️ Sélecteur CSS '${cssSelector}' introuvable ou erreur.`);
       }
     }
 
-    // ✅ Fallback automatique
     if (!balanceText) {
       const paragraphs = await driver.findElements(By.css('p'));
       console.log(`🔎 ${paragraphs.length} balises <p> trouvées :`);
@@ -89,7 +101,7 @@ const getBalanceWithSelenium = async (url, cssSelector) => {
         console.log('👉', text);
         if (text && text.match(/[0-9]{1,3}([.,][0-9]{3})*([.,][0-9]+)?/)) {
           balanceText = text;
-          console.log('🔄 Balance trouvée dynamiquement dans un <p>: ' + balanceText);
+          console.log('🔄 Balance trouvée dynamiquement dans un <p> : ' + balanceText);
           break;
         }
       }
@@ -98,7 +110,7 @@ const getBalanceWithSelenium = async (url, cssSelector) => {
     await driver.quit();
 
     if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
-    const clean = parseFloat(balanceText.replace(/[^\d.]/g, ''));
+    const clean = parseFloat(balanceText.replace(/[^\d.,]/g, '').replace(',', ''));
     if (isNaN(clean)) throw new Error(`⚠️ Échec de parsing du solde: '${balanceText}'`);
 
     console.log(`✅ Balance extraite: ${clean}`);
@@ -108,6 +120,7 @@ const getBalanceWithSelenium = async (url, cssSelector) => {
     return { error: 'Failed to fetch balance dynamically' };
   }
 };
+
 
 // ✅ Route pour ajouter une adresse crypto
 router.post('/add-crypto-address', async (req, res) => {
