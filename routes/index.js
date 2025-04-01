@@ -73,7 +73,6 @@ const getBalanceWithSelenium = async (url, cssSelector, delimiterStart, delimite
         const el = await driver.findElement(By.css(cssSelector));
         const inner = await el.getAttribute('innerHTML');
 
-        // Si délimiteurs présents
         if (delimiterStart && delimiterEnd && inner.includes(delimiterStart) && inner.includes(delimiterEnd)) {
           const startIndex = inner.indexOf(delimiterStart);
           const endIndex = inner.indexOf(delimiterEnd, startIndex + delimiterStart.length);
@@ -83,7 +82,6 @@ const getBalanceWithSelenium = async (url, cssSelector, delimiterStart, delimite
           }
         }
 
-        // Sinon on tente via getText()
         if (!balanceText) {
           balanceText = await el.getText();
           console.log(`✅ Balance récupérée avec sélecteur CSS : ${balanceText}`);
@@ -121,7 +119,6 @@ const getBalanceWithSelenium = async (url, cssSelector, delimiterStart, delimite
   }
 };
 
-
 // ✅ Route pour ajouter une adresse crypto
 router.post('/add-crypto-address', async (req, res) => {
   const { crypto, address, delimiterStart, delimiterEnd, cssSelector } = req.body;
@@ -136,7 +133,7 @@ router.post('/add-crypto-address', async (req, res) => {
     if (delimiterStart?.trim() && delimiterEnd?.trim()) {
       balance = await getBalanceFromDelimiters(address, delimiterStart, delimiterEnd);
     } else {
-      balance = await getBalanceWithSelenium(address, cssSelector);
+      balance = await getBalanceWithSelenium(address, cssSelector, delimiterStart, delimiterEnd);
     }
 
     if (balance.error) return res.status(500).json({ error: balance.error });
@@ -166,9 +163,12 @@ router.post('/refresh-wallet-balance', async (req, res) => {
     const wallet = await UserCrypto.findOne({ address });
     if (!wallet) return res.status(404).json({ error: 'Portefeuille introuvable' });
 
-    const balance = wallet.delimiterStart && wallet.delimiterEnd
-      ? await getBalanceFromDelimiters(wallet.address, wallet.delimiterStart, wallet.delimiterEnd)
-      : await getBalanceWithSelenium(wallet.address, wallet.cssSelector);
+    const balance = await getBalanceWithSelenium(
+      wallet.address,
+      wallet.cssSelector,
+      wallet.delimiterStart,
+      wallet.delimiterEnd
+    );
 
     if (balance.error) return res.status(500).json({ error: balance.error });
 
