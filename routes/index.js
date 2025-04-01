@@ -18,6 +18,11 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
     const response = await axios.get(url);
     const data = response.data;
 
+    // 🧪 DEBUG HTML Axios
+    console.log('\n===== 🔍 HTML reçu depuis Axios (début) =====');
+    console.log(data.slice(0, 3000));
+    console.log('============================================\n');
+
     const startIndex = data.indexOf(delimiterStart);
     if (startIndex === -1) throw new Error(`Délimiteur de début introuvable.`);
     const endIndex = data.indexOf(delimiterEnd, startIndex + delimiterStart.length);
@@ -57,6 +62,12 @@ const getBalanceWithSelenium = async (url) => {
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
     await driver.get(url);
 
+    // 🧪 DEBUG HTML Selenium
+    const pageSource = await driver.getPageSource();
+    console.log('\n===== 🧪 HTML extrait par Selenium (début) =====');
+    console.log(pageSource.slice(0, 3000));
+    console.log('===============================================\n');
+
     let balanceText;
 
     try {
@@ -65,8 +76,10 @@ const getBalanceWithSelenium = async (url) => {
       balanceText = await el.getText();
     } catch {
       const paragraphs = await driver.findElements(By.css('p'));
+      console.log(`🔎 ${paragraphs.length} balises <p> trouvées :`);
       for (const p of paragraphs) {
         const text = await p.getText();
+        console.log('👉', text);
         if (text && text.match(/[0-9]{1,3}([.,][0-9]{3})*([.,][0-9]+)?/)) {
           balanceText = text;
           console.log('🔄 Balance trouvée dynamiquement dans un <p>: ' + balanceText);
