@@ -18,7 +18,6 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
     const response = await axios.get(url);
     const data = response.data;
 
-    // 🧪 DEBUG HTML Axios
     console.log('\n===== 🔍 HTML reçu depuis Axios (début) =====');
     console.log(data);
     console.log('============================================\n');
@@ -38,8 +37,8 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   }
 };
 
-// ✅ Fonction Selenium avec fallback dynamique
-const getBalanceWithSelenium = async (url) => {
+// ✅ Fonction Selenium avec fallback dynamique + debug HTML
+const getBalanceWithSelenium = async (url, cssSelector) => {
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
 
@@ -62,19 +61,27 @@ const getBalanceWithSelenium = async (url) => {
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
     await driver.get(url);
 
-    // 🧪 DEBUG HTML Selenium
-    const pageSource = await driver.getPageSource();
-    console.log('\n===== 🧪 HTML extrait par Selenium (début) =====');
-    console.log(pageSource);
-    console.log('===============================================\n');
+    // 🔍 Debug HTML complet
+    const html = await driver.getPageSource();
+    console.log('\n===== 🧪 HTML complet extrait par Selenium (début) =====');
+    console.log(html);
+    console.log('=======================================================\n');
 
     let balanceText;
 
-    try {
-      await driver.wait(until.elementLocated(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36')), 5000);
-      const el = await driver.findElement(By.css('p.w-fit.break-all.font-space.text-2xl.sm\\:text-36'));
-      balanceText = await el.getText();
-    } catch {
+    // ✅ Si sélecteur fourni
+    if (cssSelector) {
+      try {
+        const el = await driver.findElement(By.css(cssSelector));
+        balanceText = await el.getText();
+        console.log(`✅ Balance récupérée avec sélecteur '${cssSelector}': ${balanceText}`);
+      } catch {
+        console.warn(`⚠️ Sélecteur CSS '${cssSelector}' introuvable. Fallback sur <p>`);
+      }
+    }
+
+    // ✅ Fallback automatique
+    if (!balanceText) {
       const paragraphs = await driver.findElements(By.css('p'));
       console.log(`🔎 ${paragraphs.length} balises <p> trouvées :`);
       for (const p of paragraphs) {
