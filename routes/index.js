@@ -20,7 +20,7 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
 
     // 🧪 DEBUG HTML Axios
     console.log('\n===== 🔍 HTML reçu depuis Axios (début) =====');
-    console.log(data.slice(0, 3000));
+    console.log(data);
     console.log('============================================\n');
 
     const startIndex = data.indexOf(delimiterStart);
@@ -65,7 +65,7 @@ const getBalanceWithSelenium = async (url) => {
     // 🧪 DEBUG HTML Selenium
     const pageSource = await driver.getPageSource();
     console.log('\n===== 🧪 HTML extrait par Selenium (début) =====');
-    console.log(pageSource.slice(0, 3000));
+    console.log(pageSource);
     console.log('===============================================\n');
 
     let balanceText;
