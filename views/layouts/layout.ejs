@@ -147,51 +147,18 @@
       wallets.forEach(wallet => {
         const row = document.createElement('tr');
 
-        // Crypto
-        const cryptoCell = document.createElement('td');
-        cryptoCell.textContent = wallet.crypto;
+        const isUrl = wallet.address.startsWith("http://") || wallet.address.startsWith("https://");
 
-        // Adresse (lien cliquable si URL)
-        const addressCell = document.createElement('td');
-        const isURL = wallet.address.startsWith('http://') || wallet.address.startsWith('https://');
-        if (isURL) {
-          const link = document.createElement('a');
-          link.href = wallet.address;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          link.textContent = wallet.address;
-          addressCell.appendChild(link);
-        } else {
-          addressCell.textContent = wallet.address;
-        }
-
-        // Solde
-        const balanceCell = document.createElement('td');
-        balanceCell.textContent = wallet.balance;
-
-        // Valeur USD
-        const usdCell = document.createElement('td');
-        usdCell.textContent = wallet.usdValue || 0;
-
-        // Actions
-        const actionsCell = document.createElement('td');
-        const refreshBtn = document.createElement('button');
-        refreshBtn.textContent = '🔄';
-        refreshBtn.onclick = () => refreshWallet(wallet.address);
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = '🗑️';
-        deleteBtn.onclick = () => deleteWallet(wallet._id);
-
-        actionsCell.appendChild(refreshBtn);
-        actionsCell.appendChild(deleteBtn);
-
-        // Ajout à la ligne
-        row.appendChild(cryptoCell);
-        row.appendChild(addressCell);
-        row.appendChild(balanceCell);
-        row.appendChild(usdCell);
-        row.appendChild(actionsCell);
+        row.innerHTML = `
+          <td>${wallet.crypto}</td>
+          <td>${isUrl ? `<a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a>` : wallet.address}</td>
+          <td>${wallet.balance}</td>
+          <td>${wallet.usdValue || 0}</td>
+          <td>
+            <button onclick="refreshWallet('${wallet.address}')">🔄</button>
+            <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
+          </td>
+        `;
 
         walletsList.appendChild(row);
         total += wallet.usdValue || 0;
@@ -226,11 +193,9 @@
       }
     }
 
-  // ✅ Ajout automatique des portefeuilles au chargement
-  window.addEventListener('DOMContentLoaded', () => {
-    loadWallets();
-  });
-
+    window.addEventListener('DOMContentLoaded', () => {
+      loadWallets();
+    });
   </script>
 
   <script src="/js/tabs.js"></script>
