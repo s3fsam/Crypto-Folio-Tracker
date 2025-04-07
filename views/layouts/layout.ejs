@@ -225,6 +225,12 @@
         alert("❌ Erreur lors de la suppression !");
       }
     }
+
+  // ✅ Ajout automatique des portefeuilles au chargement
+  window.addEventListener('DOMContentLoaded', () => {
+    loadWallets();
+  });
+
   </script>
 
   <script src="/js/tabs.js"></script>
