@@ -148,7 +148,7 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${wallet.crypto}</td>
-          <td>${wallet.address}</td>
+          <td><a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a></td>
           <td>${wallet.balance}</td>
           <td>${wallet.usdValue || 0}</td>
           <td>
