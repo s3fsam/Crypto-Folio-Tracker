@@ -135,32 +135,7 @@
       }
     });
 
-    async function loadWallets() {
-      const walletsList = document.getElementById('wallets-list');
-      const totalBalanceEl = document.getElementById('current-balance');
-      walletsList.innerHTML = '';
-      let total = 0;
-
-      const res = await fetch('/wallets');
-      const wallets = await res.json();
-
-      wallets.forEach(wallet => {
-        const row = document.createElement('tr');
-
-        const isUrl = wallet.address.startsWith("http://") || wallet.address.startsWith("https://");
-
-        row.innerHTML = `
-          <td>${wallet.crypto}</td>
-          <td>${isUrl ? `<a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a>` : wallet.address}</td>
-          <td>${wallet.balance}</td>
-          <td>${wallet.usdValue || 0}</td>
-          <td>
-            <button onclick="refreshWallet('${wallet.address}')">🔄</button>
-            <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
-          </td>
-        `;
-
-        walletsList.appendChild(row);
+            walletsList.appendChild(row);
         total += wallet.usdValue || 0;
       });
 
