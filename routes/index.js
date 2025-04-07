@@ -1,5 +1,3 @@
-// ... les require restent inchangés
-
 const express = require('express');
 const router = express.Router();
 
@@ -14,153 +12,201 @@ const { execSync } = require('child_process');
 const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List');
 
-// ✅ Méthode par délimiteurs HTML (prioritaire si les deux champs sont remplis)
+// ✅ Fonction de parsing avec délimiteurs HTML
 const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   try {
     const response = await axios.get(url);
     const data = response.data;
 
+    console.log('\n===== 🔍 HTML reçu depuis Axios (début) =====');
+    console.log(data);
+    console.log('============================================\n');
+
     const startIndex = data.indexOf(delimiterStart);
-    if (startIndex === -1) throw new Error('Début introuvable');
+    if (startIndex === -1) throw new Error(`Délimiteur de début introuvable.`);
     const endIndex = data.indexOf(delimiterEnd, startIndex + delimiterStart.length);
-    if (endIndex === -1) throw new Error('Fin introuvable');
+    if (endIndex === -1) throw new Error(`Délimiteur de fin introuvable.`);
 
     const balanceText = data.substring(startIndex + delimiterStart.length, endIndex).trim();
     const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
-    if (isNaN(balance)) throw new Error(`Balance extraction failed: '${balanceText}'`);
+    if (isNaN(balance)) throw new Error(`⚠️ Balance extraction failed. Raw: '${balanceText}'`);
     return balance;
   } catch (error) {
-    console.error('❌ [DELIMITERS] Error:', error.message);
+    console.error('❌ Error fetching balance with delimiters:', error.message);
     return { error: 'Failed to fetch balance with delimiters' };
   }
 };
 
-// ✅ Méthode Selenium : CSS sélecteur fourni
-const getBalanceWithCssSelector = async (url, cssSelector) => {
-  const driver = await launchBrowser(url);
+// ✅ Fonction Selenium avec fallback dynamique + debug HTML
+const getBalanceWithSelenium = async (url, cssSelector) => {
   try {
-    const el = await driver.findElement(By.css(cssSelector));
-    const balanceText = await el.getText();
-    await driver.quit();
-    const clean = parseFloat(balanceText.replace(/[^\d.]/g, ''));
-    if (isNaN(clean)) throw new Error(`Invalid balance: '${balanceText}'`);
-    return clean;
-  } catch (err) {
-    await driver.quit();
-    return { error: 'Failed to fetch with selector' };
-  }
-};
+    console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
 
-// ✅ Fallback Selenium : recherche automatique dans les <p>
-const getBalanceFromFallbackParagraphs = async (url) => {
-  const driver = await launchBrowser(url);
-  try {
-    const paragraphs = await driver.findElements(By.css('p'));
-    for (const p of paragraphs) {
-      const text = await p.getText();
-      if (text && text.match(/[0-9]{1,3}([.,][0-9]{3})*([.,][0-9]+)?/)) {
-        await driver.quit();
-        const clean = parseFloat(text.replace(/[^\d.]/g, ''));
-        if (isNaN(clean)) break;
-        return clean;
+    try {
+      execSync('pkill chrome || pkill chromium || pkill -f chromedriver', { stdio: 'ignore' });
+      console.log('✅ Chrome instances killed successfully.');
+    } catch (e) {
+      console.warn('⚠️ No running Chrome instances found.');
+    }
+
+    const userDataDir = path.join(os.tmpdir(), `selenium-profile-${Date.now()}`);
+    fs.mkdirSync(userDataDir, { recursive: true });
+
+    const options = new chrome.Options().addArguments(
+      '--headless', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
+      '--disable-software-rasterizer', '--disable-blink-features=AutomationControlled',
+      '--remote-debugging-port=9222', `--user-data-dir=${userDataDir}`, '--no-first-run', '--disable-extensions'
+    );
+
+    const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
+    await driver.get(url);
+
+    // 🔍 Debug HTML complet
+    const html = await driver.getPageSource();
+    console.log('\n===== 🧪 HTML complet extrait par Selenium (début) =====');
+    console.log(html);
+    console.log('=======================================================\n');
+
+    let balanceText;
+
+    // ✅ Si sélecteur fourni
+    if (cssSelector) {
+      try {
+        const el = await driver.findElement(By.css(cssSelector));
+        balanceText = await el.getText();
+        console.log(`✅ Balance récupérée avec sélecteur '${cssSelector}': ${balanceText}`);
+      } catch {
+        console.warn(`⚠️ Sélecteur CSS '${cssSelector}' introuvable. Fallback sur <p>`);
       }
     }
+
+    // ✅ Fallback automatique
+    if (!balanceText) {
+      const paragraphs = await driver.findElements(By.css('p'));
+      console.log(`🔎 ${paragraphs.length} balises <p> trouvées :`);
+      for (const p of paragraphs) {
+        const text = await p.getText();
+        console.log('👉', text);
+        if (text && text.match(/[0-9]{1,3}([.,][0-9]{3})*([.,][0-9]+)?/)) {
+          balanceText = text;
+          console.log('🔄 Balance trouvée dynamiquement dans un <p>: ' + balanceText);
+          break;
+        }
+      }
+    }
+
     await driver.quit();
-    return { error: 'Balance not found in <p>' };
-  } catch (err) {
-    await driver.quit();
-    return { error: 'Error fetching paragraphs' };
+
+    if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
+    const clean = parseFloat(balanceText.replace(/[^\d.]/g, ''));
+    if (isNaN(clean)) throw new Error(`⚠️ Échec de parsing du solde: '${balanceText}'`);
+
+    console.log(`✅ Balance extraite: ${clean}`);
+    return clean;
+  } catch (error) {
+    console.error('❌ Error fetching balance with Selenium:', error.message);
+    return { error: 'Failed to fetch balance dynamically' };
   }
 };
 
-// ✅ Lance un navigateur Selenium
-const launchBrowser = async (url) => {
-  execSync('pkill chrome || pkill chromium || pkill -f chromedriver', { stdio: 'ignore' });
-  const userDataDir = path.join(os.tmpdir(), `selenium-profile-${Date.now()}`);
-  fs.mkdirSync(userDataDir, { recursive: true });
-
-  const options = new chrome.Options().addArguments(
-    '--headless', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
-    '--disable-software-rasterizer', '--disable-blink-features=AutomationControlled',
-    '--remote-debugging-port=9222', `--user-data-dir=${userDataDir}`, '--no-first-run', '--disable-extensions'
-  );
-
-  const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
-  await driver.get(url);
-  return driver;
-};
-
-// ✅ Ajout d’une crypto
+// ✅ Route pour ajouter une adresse crypto
 router.post('/add-crypto-address', async (req, res) => {
   const { crypto, address, delimiterStart, delimiterEnd, cssSelector } = req.body;
-  if (!crypto || !address) return res.status(400).json({ error: 'Crypto and address are required' });
+
+  if (!crypto || !address) {
+    return res.status(400).json({ error: 'Crypto and address are required' });
+  }
 
   try {
     let balance;
+
     if (delimiterStart?.trim() && delimiterEnd?.trim()) {
       balance = await getBalanceFromDelimiters(address, delimiterStart, delimiterEnd);
-    } else if (cssSelector?.trim()) {
-      balance = await getBalanceWithCssSelector(address, cssSelector);
-      if (balance.error) balance = await getBalanceFromFallbackParagraphs(address);
     } else {
-      balance = await getBalanceFromFallbackParagraphs(address);
+      balance = await getBalanceWithSelenium(address, cssSelector);
     }
 
     if (balance.error) return res.status(500).json({ error: balance.error });
 
-    const userCrypto = new UserCrypto({ crypto, address, balance, delimiterStart, delimiterEnd, cssSelector });
+    const userCrypto = new UserCrypto({
+      crypto,
+      address,
+      balance,
+      delimiterStart: delimiterStart || undefined,
+      delimiterEnd: delimiterEnd || undefined,
+      cssSelector: cssSelector || undefined
+    });
+
     await userCrypto.save();
+    console.log(`✅ Crypto address added: ${crypto} - ${address}`);
     res.status(201).json(userCrypto);
-  } catch (err) {
-    console.error('❌ Error adding:', err.message);
-    res.status(500).json({ error: 'Server error' });
+  } catch (error) {
+    console.error('❌ Error adding crypto address:', error.message);
+    res.status(500).json({ error: 'Error adding crypto address' });
   }
 });
 
-// ✅ Rafraîchir un portefeuille
+// ✅ Route pour rafraîchir un portefeuille
 router.post('/refresh-wallet-balance', async (req, res) => {
   const { address } = req.body;
-  const wallet = await UserCrypto.findOne({ address });
-  if (!wallet) return res.status(404).json({ error: 'Wallet not found' });
+  try {
+    const wallet = await UserCrypto.findOne({ address });
+    if (!wallet) return res.status(404).json({ error: 'Portefeuille introuvable' });
 
-  let balance;
-  if (wallet.delimiterStart && wallet.delimiterEnd) {
-    balance = await getBalanceFromDelimiters(wallet.address, wallet.delimiterStart, wallet.delimiterEnd);
-  } else if (wallet.cssSelector) {
-    balance = await getBalanceWithCssSelector(wallet.address, wallet.cssSelector);
-    if (balance.error) balance = await getBalanceFromFallbackParagraphs(wallet.address);
-  } else {
-    balance = await getBalanceFromFallbackParagraphs(wallet.address);
+    const balance = wallet.delimiterStart && wallet.delimiterEnd
+      ? await getBalanceFromDelimiters(wallet.address, wallet.delimiterStart, wallet.delimiterEnd)
+      : await getBalanceWithSelenium(wallet.address, wallet.cssSelector);
+
+    if (balance.error) return res.status(500).json({ error: balance.error });
+
+    wallet.balance = balance;
+    await wallet.save();
+    res.status(200).json(wallet);
+  } catch (err) {
+    console.error('❌ Erreur mise à jour solde:', err.message);
+    res.status(500).json({ error: 'Erreur mise à jour' });
   }
-
-  if (balance.error) return res.status(500).json({ error: balance.error });
-
-  wallet.balance = balance;
-  await wallet.save();
-  res.status(200).json(wallet);
 });
 
-// ✅ Autres routes inchangées
+// ✅ Page d’accueil avec les cryptos
 router.get('/', async (req, res) => {
-  const prices = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
-  const { bitcoin, ethereum } = prices.data;
-  const cryptos = await Crypto.find({}, 'id name');
-  res.render('layouts/layout', {
-    title: 'Home',
-    bitcoinPrice: bitcoin.usd,
-    ethereumPrice: ethereum.usd,
-    cryptos
-  });
+  try {
+    const pricesResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
+    const { bitcoin, ethereum } = pricesResponse.data;
+    const cryptos = await Crypto.find({}, 'id name');
+
+    res.render('layouts/layout', {
+      title: 'Home',
+      bitcoinPrice: bitcoin.usd,
+      ethereumPrice: ethereum.usd,
+      cryptos
+    });
+  } catch (error) {
+    console.error('❌ Error fetching data:', error.message);
+    res.status(500).json({ error: 'Error fetching data' });
+  }
 });
 
+// ✅ Récupérer tous les portefeuilles
 router.get('/wallets', async (req, res) => {
-  const wallets = await UserCrypto.find();
-  res.status(200).json(wallets);
+  try {
+    const wallets = await UserCrypto.find();
+    res.status(200).json(wallets);
+  } catch (err) {
+    console.error('❌ Erreur récupération portefeuilles:', err.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
+// ✅ Supprimer un portefeuille
 router.delete('/wallets/:id', async (req, res) => {
-  await UserCrypto.findByIdAndDelete(req.params.id);
-  res.status(200).json({ message: 'Portefeuille supprimé.' });
+  try {
+    await UserCrypto.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Portefeuille supprimé.' });
+  } catch (err) {
+    console.error('Erreur suppression portefeuille:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 module.exports = router;
