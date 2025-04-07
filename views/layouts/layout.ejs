@@ -145,20 +145,21 @@
       const wallets = await res.json();
 
       wallets.forEach(wallet => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${wallet.crypto}</td>
-          <td><a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a></td>
-          <td>${wallet.balance}</td>
-          <td>${wallet.usdValue || 0}</td>
-          <td>
-            <button onclick="refreshWallet('${wallet.address}')">🔄</button>
-            <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
-          </td>
-        `;
-        total += wallet.usdValue || 0;
-        walletsList.appendChild(row);
-      });
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td>${wallet.crypto}</td>
+    <td><a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a></td>
+    <td>${wallet.balance}</td>
+    <td>${wallet.usdValue || 0}</td>
+    <td>
+      <button onclick="refreshWallet('${wallet.address}')">🔄</button>
+      <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
+    </td>
+  `;
+  total += wallet.usdValue || 0;
+  walletsList.appendChild(row);
+});
+
 
       totalBalanceEl.textContent = total.toFixed(2);
     }
