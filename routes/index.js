@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const axios = require('axios');
-const cheerio = require('cheerio');
+const cheerio = require('cheerio'); // ✅ Non utilisé mais conservé
 const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const path = require('path');
@@ -12,7 +12,12 @@ const { execSync } = require('child_process');
 const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List');
 
-// ✅ Fonction de parsing avec délimiteurs HTML
+// ✅ Fonction 1 : Seulement URL avec parsing automatique
+const getBalanceWithSeleniumFallback = async (url) => {
+  return await getBalanceFull(url, null, null, null);
+};
+
+// ✅ Fonction 2 : URL + délimiteurs HTML (axios)
 const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   try {
     const response = await axios.get(url);
@@ -37,8 +42,8 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   }
 };
 
-// ✅ Fonction Selenium avec fallback dynamique + debug HTML
-const getBalanceWithSelenium = async (url, cssSelector) => {
+// ✅ Fonction 3 & 4 : via Selenium avec ou sans CSS + délimiteurs
+const getBalanceFull = async (url, cssSelector, delimiterStart, delimiterEnd) => {
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
 
@@ -61,7 +66,6 @@ const getBalanceWithSelenium = async (url, cssSelector) => {
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
     await driver.get(url);
 
-    // 🔍 Debug HTML complet
     const html = await driver.getPageSource();
     console.log('\n===== 🧪 HTML complet extrait par Selenium (début) =====');
     console.log(html);
@@ -69,18 +73,29 @@ const getBalanceWithSelenium = async (url, cssSelector) => {
 
     let balanceText;
 
-    // ✅ Si sélecteur fourni
     if (cssSelector) {
       try {
         const el = await driver.findElement(By.css(cssSelector));
-        balanceText = await el.getText();
-        console.log(`✅ Balance récupérée avec sélecteur '${cssSelector}': ${balanceText}`);
+        const inner = await el.getAttribute('innerHTML');
+
+        if (delimiterStart && delimiterEnd && inner.includes(delimiterStart) && inner.includes(delimiterEnd)) {
+          const startIndex = inner.indexOf(delimiterStart);
+          const endIndex = inner.indexOf(delimiterEnd, startIndex + delimiterStart.length);
+          if (startIndex !== -1 && endIndex !== -1) {
+            balanceText = inner.substring(startIndex + delimiterStart.length, endIndex).trim();
+            console.log(`🔍 Balance trouvée avec CSS + délimiteurs : ${balanceText}`);
+          }
+        }
+
+        if (!balanceText) {
+          balanceText = await el.getText();
+          console.log(`✅ Balance récupérée avec sélecteur CSS : ${balanceText}`);
+        }
       } catch {
-        console.warn(`⚠️ Sélecteur CSS '${cssSelector}' introuvable. Fallback sur <p>`);
+        console.warn(`⚠️ Sélecteur CSS '${cssSelector}' introuvable ou erreur.`);
       }
     }
 
-    // ✅ Fallback automatique
     if (!balanceText) {
       const paragraphs = await driver.findElements(By.css('p'));
       console.log(`🔎 ${paragraphs.length} balises <p> trouvées :`);
@@ -98,7 +113,7 @@ const getBalanceWithSelenium = async (url, cssSelector) => {
     await driver.quit();
 
     if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
-    const clean = parseFloat(balanceText.replace(/[^\d.]/g, ''));
+    const clean = parseFloat(balanceText.replace(/[^\d.,]/g, '').replace(',', ''));
     if (isNaN(clean)) throw new Error(`⚠️ Échec de parsing du solde: '${balanceText}'`);
 
     console.log(`✅ Balance extraite: ${clean}`);
@@ -120,10 +135,14 @@ router.post('/add-crypto-address', async (req, res) => {
   try {
     let balance;
 
-    if (delimiterStart?.trim() && delimiterEnd?.trim()) {
+    if (cssSelector?.trim() && delimiterStart?.trim() && delimiterEnd?.trim()) {
+      balance = await getBalanceFull(address, cssSelector, delimiterStart, delimiterEnd);
+    } else if (delimiterStart?.trim() && delimiterEnd?.trim()) {
       balance = await getBalanceFromDelimiters(address, delimiterStart, delimiterEnd);
+    } else if (cssSelector?.trim()) {
+      balance = await getBalanceFull(address, cssSelector, null, null);
     } else {
-      balance = await getBalanceWithSelenium(address, cssSelector);
+      balance = await getBalanceWithSeleniumFallback(address);
     }
 
     if (balance.error) return res.status(500).json({ error: balance.error });
@@ -153,9 +172,16 @@ router.post('/refresh-wallet-balance', async (req, res) => {
     const wallet = await UserCrypto.findOne({ address });
     if (!wallet) return res.status(404).json({ error: 'Portefeuille introuvable' });
 
-    const balance = wallet.delimiterStart && wallet.delimiterEnd
-      ? await getBalanceFromDelimiters(wallet.address, wallet.delimiterStart, wallet.delimiterEnd)
-      : await getBalanceWithSelenium(wallet.address, wallet.cssSelector);
+    let balance;
+    if (wallet.cssSelector && wallet.delimiterStart && wallet.delimiterEnd) {
+      balance = await getBalanceFull(wallet.address, wallet.cssSelector, wallet.delimiterStart, wallet.delimiterEnd);
+    } else if (wallet.delimiterStart && wallet.delimiterEnd) {
+      balance = await getBalanceFromDelimiters(wallet.address, wallet.delimiterStart, wallet.delimiterEnd);
+    } else if (wallet.cssSelector) {
+      balance = await getBalanceFull(wallet.address, wallet.cssSelector, null, null);
+    } else {
+      balance = await getBalanceWithSeleniumFallback(wallet.address);
+    }
 
     if (balance.error) return res.status(500).json({ error: balance.error });
 
@@ -168,7 +194,7 @@ router.post('/refresh-wallet-balance', async (req, res) => {
   }
 });
 
-// ✅ Page d’accueil avec les cryptos
+// ✅ Page d’accueil
 router.get('/', async (req, res) => {
   try {
     const pricesResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
@@ -187,7 +213,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ✅ Récupérer tous les portefeuilles
+// ✅ Liste portefeuilles
 router.get('/wallets', async (req, res) => {
   try {
     const wallets = await UserCrypto.find();
@@ -198,7 +224,7 @@ router.get('/wallets', async (req, res) => {
   }
 });
 
-// ✅ Supprimer un portefeuille
+// ✅ Supprimer portefeuille
 router.delete('/wallets/:id', async (req, res) => {
   try {
     await UserCrypto.findByIdAndDelete(req.params.id);
