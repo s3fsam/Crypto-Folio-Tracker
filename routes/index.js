@@ -37,8 +37,8 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   }
 };
 
-// ✅ Fonction Selenium avec fallback dynamique + debug HTML + support des délimiteurs
-const getBalanceWithSelenium = async (url, cssSelector, delimiterStart, delimiterEnd) => {
+// ✅ Fonction Selenium avec fallback dynamique + debug HTML
+const getBalanceWithSelenium = async (url, cssSelector) => {
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
 
@@ -61,6 +61,7 @@ const getBalanceWithSelenium = async (url, cssSelector, delimiterStart, delimite
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
     await driver.get(url);
 
+    // 🔍 Debug HTML complet
     const html = await driver.getPageSource();
     console.log('\n===== 🧪 HTML complet extrait par Selenium (début) =====');
     console.log(html);
@@ -68,29 +69,18 @@ const getBalanceWithSelenium = async (url, cssSelector, delimiterStart, delimite
 
     let balanceText;
 
+    // ✅ Si sélecteur fourni
     if (cssSelector) {
       try {
         const el = await driver.findElement(By.css(cssSelector));
-        const inner = await el.getAttribute('innerHTML');
-
-        if (delimiterStart && delimiterEnd && inner.includes(delimiterStart) && inner.includes(delimiterEnd)) {
-          const startIndex = inner.indexOf(delimiterStart);
-          const endIndex = inner.indexOf(delimiterEnd, startIndex + delimiterStart.length);
-          if (startIndex !== -1 && endIndex !== -1) {
-            balanceText = inner.substring(startIndex + delimiterStart.length, endIndex).trim();
-            console.log(`🔍 Balance trouvée avec CSS + délimiteurs : ${balanceText}`);
-          }
-        }
-
-        if (!balanceText) {
-          balanceText = await el.getText();
-          console.log(`✅ Balance récupérée avec sélecteur CSS : ${balanceText}`);
-        }
+        balanceText = await el.getText();
+        console.log(`✅ Balance récupérée avec sélecteur '${cssSelector}': ${balanceText}`);
       } catch {
-        console.warn(`⚠️ Sélecteur CSS '${cssSelector}' introuvable ou erreur.`);
+        console.warn(`⚠️ Sélecteur CSS '${cssSelector}' introuvable. Fallback sur <p>`);
       }
     }
 
+    // ✅ Fallback automatique
     if (!balanceText) {
       const paragraphs = await driver.findElements(By.css('p'));
       console.log(`🔎 ${paragraphs.length} balises <p> trouvées :`);
@@ -99,7 +89,7 @@ const getBalanceWithSelenium = async (url, cssSelector, delimiterStart, delimite
         console.log('👉', text);
         if (text && text.match(/[0-9]{1,3}([.,][0-9]{3})*([.,][0-9]+)?/)) {
           balanceText = text;
-          console.log('🔄 Balance trouvée dynamiquement dans un <p> : ' + balanceText);
+          console.log('🔄 Balance trouvée dynamiquement dans un <p>: ' + balanceText);
           break;
         }
       }
@@ -108,7 +98,7 @@ const getBalanceWithSelenium = async (url, cssSelector, delimiterStart, delimite
     await driver.quit();
 
     if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
-    const clean = parseFloat(balanceText.replace(/[^\d.,]/g, '').replace(',', ''));
+    const clean = parseFloat(balanceText.replace(/[^\d.]/g, ''));
     if (isNaN(clean)) throw new Error(`⚠️ Échec de parsing du solde: '${balanceText}'`);
 
     console.log(`✅ Balance extraite: ${clean}`);
@@ -133,7 +123,7 @@ router.post('/add-crypto-address', async (req, res) => {
     if (delimiterStart?.trim() && delimiterEnd?.trim()) {
       balance = await getBalanceFromDelimiters(address, delimiterStart, delimiterEnd);
     } else {
-      balance = await getBalanceWithSelenium(address, cssSelector, delimiterStart, delimiterEnd);
+      balance = await getBalanceWithSelenium(address, cssSelector);
     }
 
     if (balance.error) return res.status(500).json({ error: balance.error });
@@ -163,12 +153,9 @@ router.post('/refresh-wallet-balance', async (req, res) => {
     const wallet = await UserCrypto.findOne({ address });
     if (!wallet) return res.status(404).json({ error: 'Portefeuille introuvable' });
 
-    const balance = await getBalanceWithSelenium(
-      wallet.address,
-      wallet.cssSelector,
-      wallet.delimiterStart,
-      wallet.delimiterEnd
-    );
+    const balance = wallet.delimiterStart && wallet.delimiterEnd
+      ? await getBalanceFromDelimiters(wallet.address, wallet.delimiterStart, wallet.delimiterEnd)
+      : await getBalanceWithSelenium(wallet.address, wallet.cssSelector);
 
     if (balance.error) return res.status(500).json({ error: balance.error });
 
