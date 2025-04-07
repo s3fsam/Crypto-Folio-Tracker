@@ -131,25 +131,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
 async function loadWallets() {
   const walletsList = document.getElementById('wallets-list');
+  const totalBalanceEl = document.getElementById('current-balance');
   walletsList.innerHTML = '';
+  let total = 0;
+
   const response = await fetch('/wallets');
   const wallets = await response.json();
 
   wallets.forEach(wallet => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
+    const isUrl = wallet.address.startsWith("http://") || wallet.address.startsWith("https://");
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
       <td>${wallet.crypto}</td>
-      <td>${wallet.address}</td>
+      <td>${isUrl ? `<a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a>` : wallet.address}</td>
       <td>${wallet.balance}</td>
-      <td>${wallet.usdValue}</td>
+      <td>${wallet.usdValue || 0}</td>
       <td>
         <button onclick="refreshWallet('${wallet.address}')">🔄</button>
         <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
       </td>
     `;
-    walletsList.appendChild(tr);
+    walletsList.appendChild(row);
+    total += wallet.usdValue || 0;
   });
+
+  if (totalBalanceEl) totalBalanceEl.textContent = total.toFixed(2);
 }
+
 
 async function deleteWallet(id) {
   if (!confirm("Voulez-vous vraiment supprimer ce portefeuille ?")) return;
