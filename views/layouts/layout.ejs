@@ -147,28 +147,33 @@
       wallets.forEach(wallet => {
         const row = document.createElement('tr');
 
-        // Cellule crypto
+        // Crypto
         const cryptoCell = document.createElement('td');
         cryptoCell.textContent = wallet.crypto;
 
-        // Cellule adresse avec lien
+        // Adresse (lien cliquable si URL)
         const addressCell = document.createElement('td');
-        const link = document.createElement('a');
-        link.href = wallet.address;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.textContent = wallet.address;
-        addressCell.appendChild(link);
+        const isURL = wallet.address.startsWith('http://') || wallet.address.startsWith('https://');
+        if (isURL) {
+          const link = document.createElement('a');
+          link.href = wallet.address;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.textContent = wallet.address;
+          addressCell.appendChild(link);
+        } else {
+          addressCell.textContent = wallet.address;
+        }
 
-        // Cellule solde
+        // Solde
         const balanceCell = document.createElement('td');
         balanceCell.textContent = wallet.balance;
 
-        // Cellule USD
+        // Valeur USD
         const usdCell = document.createElement('td');
         usdCell.textContent = wallet.usdValue || 0;
 
-        // Cellule actions
+        // Actions
         const actionsCell = document.createElement('td');
         const refreshBtn = document.createElement('button');
         refreshBtn.textContent = '🔄';
@@ -181,6 +186,7 @@
         actionsCell.appendChild(refreshBtn);
         actionsCell.appendChild(deleteBtn);
 
+        // Ajout à la ligne
         row.appendChild(cryptoCell);
         row.appendChild(addressCell);
         row.appendChild(balanceCell);
