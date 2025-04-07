@@ -145,21 +145,51 @@
       const wallets = await res.json();
 
       wallets.forEach(wallet => {
-  const row = document.createElement('tr');
-  row.innerHTML = `
-    <td>${wallet.crypto}</td>
-    <td><a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a></td>
-    <td>${wallet.balance}</td>
-    <td>${wallet.usdValue || 0}</td>
-    <td>
-      <button onclick="refreshWallet('${wallet.address}')">🔄</button>
-      <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
-    </td>
-  `;
-  total += wallet.usdValue || 0;
-  walletsList.appendChild(row);
-});
+        const row = document.createElement('tr');
 
+        // Cellule crypto
+        const cryptoCell = document.createElement('td');
+        cryptoCell.textContent = wallet.crypto;
+
+        // Cellule adresse avec lien
+        const addressCell = document.createElement('td');
+        const link = document.createElement('a');
+        link.href = wallet.address;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = wallet.address;
+        addressCell.appendChild(link);
+
+        // Cellule solde
+        const balanceCell = document.createElement('td');
+        balanceCell.textContent = wallet.balance;
+
+        // Cellule USD
+        const usdCell = document.createElement('td');
+        usdCell.textContent = wallet.usdValue || 0;
+
+        // Cellule actions
+        const actionsCell = document.createElement('td');
+        const refreshBtn = document.createElement('button');
+        refreshBtn.textContent = '🔄';
+        refreshBtn.onclick = () => refreshWallet(wallet.address);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.onclick = () => deleteWallet(wallet._id);
+
+        actionsCell.appendChild(refreshBtn);
+        actionsCell.appendChild(deleteBtn);
+
+        row.appendChild(cryptoCell);
+        row.appendChild(addressCell);
+        row.appendChild(balanceCell);
+        row.appendChild(usdCell);
+        row.appendChild(actionsCell);
+
+        walletsList.appendChild(row);
+        total += wallet.usdValue || 0;
+      });
 
       totalBalanceEl.textContent = total.toFixed(2);
     }
@@ -189,7 +219,6 @@
         alert("❌ Erreur lors de la suppression !");
       }
     }
-
   </script>
 
   <script src="/js/tabs.js"></script>
