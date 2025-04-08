@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const axios = require('axios');
-const cheerio = require('cheerio'); // ✅ Non utilisé mais conservé
+//const cheerio = require('cheerio'); // ✅ Non utilisé mais conservé
 const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const path = require('path');
@@ -20,6 +20,7 @@ const getBalanceWithSeleniumFallback = async (url) => {
 // ✅ Fonction 2 : URL + délimiteurs HTML (axios)
 const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   try {
+    console.log('============== Start Axios Function ! Delim 1 & 2 only ==============================\n');
     const response = await axios.get(url);
     const data = response.data;
 
@@ -40,10 +41,12 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
     console.error('❌ Error fetching balance with delimiters:', error.message);
     return { error: 'Failed to fetch balance with delimiters' };
   }
+   console.log('============== End of Axios Function ! ==============================\n');
 };
 
 // ✅ Fonction 3 & 4 : via Selenium avec ou sans CSS + délimiteurs
 const getBalanceFull = async (url, cssSelector, delimiterStart, delimiterEnd) => {
+   console.log('============== Start Selenium Function ! Css Selector + Delim 1 & 2 ==============================\n');
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
 
@@ -122,6 +125,7 @@ const getBalanceFull = async (url, cssSelector, delimiterStart, delimiterEnd) =>
     console.error('❌ Error fetching balance with Selenium:', error.message);
     return { error: 'Failed to fetch balance dynamically' };
   }
+  console.log('============== End Selenium Function ! Css Selector + Delim 1 & 2 ==============================\n');
 };
 
 // ✅ Route pour ajouter une adresse crypto
