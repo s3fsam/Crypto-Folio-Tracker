@@ -14,13 +14,15 @@ const Crypto = require('../models/Crypto_List');
 
 // ✅ Fonction 1 : Seulement URL avec parsing automatique
 const getBalanceWithSeleniumFallback = async (url) => {
+  console.log('============== Start Selenium Function 1 ! Url only ==============================\n');
   return await getBalanceFull(url, null, null, null);
+  console.log('============== End Selenium Function 1 ! Url only ==============================\n');
 };
 
 // ✅ Fonction 2 : URL + délimiteurs HTML (axios)
 const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   try {
-    console.log('============== Start Axios Function ! Delim 1 & 2 only ==============================\n');
+    console.log('============== Start Axios Function 2 ! Url & Delim 1 & 2 only ==============================\n');
     const response = await axios.get(url);
     const data = response.data;
 
@@ -41,12 +43,12 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
     console.error('❌ Error fetching balance with delimiters:', error.message);
     return { error: 'Failed to fetch balance with delimiters' };
   }
-   console.log('============== End of Axios Function ! ==============================\n');
+   console.log('============== End of Axios Function 2 ! ==============================\n');
 };
 
 // ✅ Fonction 3 & 4 : via Selenium avec ou sans CSS + délimiteurs
 const getBalanceFull = async (url, cssSelector, delimiterStart, delimiterEnd) => {
-   console.log('============== Start Selenium Function ! Css Selector + Delim 1 & 2 ==============================\n');
+   console.log('============== Start Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
   try {
     console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
 
