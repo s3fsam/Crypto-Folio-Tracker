@@ -18,8 +18,8 @@ const getBalanceWithSeleniumFallback = async (url) => {
   console.log('============== Start Selenium Function 1 ! Url only ==============================\n');
   return await getBalanceFull(url, null, null, null);
   console.log('============== End Selenium Function 1 ! Url only ==============================\n');
-};
- }
+ };
+}
 // ✅ Fonction 2 : URL + délimiteurs HTML (axios)
 const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   try {
