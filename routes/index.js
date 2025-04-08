@@ -13,13 +13,15 @@ const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List');
 
 // ✅ Fonction 1 : Seulement URL avec parsing automatique
-if (url && inner.includes(url)) {
-const getBalanceWithSeleniumFallback = async (url) => {
+
+const getBalanceWithSeleniumFallback = async (url, delimiterStart, delimiterEnd, cssSelector) => {
+  if (url && inner.includes(url)) {
   console.log('============== Start Selenium Function 1 ! Url only ==============================\n');
   return await getBalanceFull(url, null, null, null);
   console.log('============== End Selenium Function 1 ! Url only ==============================\n');
- };
-}
+  }
+};
+
 // ✅ Fonction 2 : URL + délimiteurs HTML (axios)
 const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   try {
