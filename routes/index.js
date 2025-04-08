@@ -53,7 +53,7 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd, cssSe
 
 // ✅ Fonction 3 & 4 : via Selenium avec ou sans CSS + délimiteurs
 const getBalanceFull = async (url, cssSelector, delimiterStart, delimiterEnd) => {
-  if (url && delimiterStart && delimiterEnd && cssSelector ) {  
+  //if (url && delimiterStart && delimiterEnd && cssSelector ) {  
      console.log('============== Start Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
     try {
       console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
@@ -136,7 +136,7 @@ const getBalanceFull = async (url, cssSelector, delimiterStart, delimiterEnd) =>
       console.log('============== End of Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
     }
     console.log('============== End of Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
-  }    
+  //}    
 };
 
 // ✅ Route pour ajouter une adresse crypto
