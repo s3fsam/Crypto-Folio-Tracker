@@ -15,7 +15,7 @@ const Crypto = require('../models/Crypto_List');
 // ✅ Fonction 1 : Seulement URL avec parsing automatique
 
 const getBalanceWithSeleniumFallback = async (url, delimiterStart, delimiterEnd, cssSelector) => {
-  if (url) {
+  if (url && !delimiterStart && !delimiterEnd && !cssSelector ) {
   console.log('============== Start Selenium Function 1 ! Url only ==============================\n');
   return await getBalanceFull(url, null, null, null);
   console.log('============== End Selenium Function 1 ! Url only ==============================\n');
