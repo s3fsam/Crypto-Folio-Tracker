@@ -53,88 +53,90 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd, cssSe
 
 // ✅ Fonction 3 & 4 : via Selenium avec ou sans CSS + délimiteurs
 const getBalanceFull = async (url, cssSelector, delimiterStart, delimiterEnd) => {
-   console.log('============== Start Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
-  try {
-    console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
-
+  if (url && delimiterStart && delimiterEnd && cssSelector ) {  
+     console.log('============== Start Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
     try {
-      execSync('pkill chrome || pkill chromium || pkill -f chromedriver', { stdio: 'ignore' });
-      console.log('✅ Chrome instances killed successfully.');
-    } catch (e) {
-      console.warn('⚠️ No running Chrome instances found.');
-    }
-
-    const userDataDir = path.join(os.tmpdir(), `selenium-profile-${Date.now()}`);
-    fs.mkdirSync(userDataDir, { recursive: true });
-
-    const options = new chrome.Options().addArguments(
-      '--headless', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
-      '--disable-software-rasterizer', '--disable-blink-features=AutomationControlled',
-      '--remote-debugging-port=9222', `--user-data-dir=${userDataDir}`, '--no-first-run', '--disable-extensions'
-    );
-
-    const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
-    await driver.get(url);
-
-    const html = await driver.getPageSource();
-    console.log('\n===== 🧪 HTML complet extrait par Selenium (début) =====');
-    console.log(html);
-    console.log('=======================================================\n');
-
-    let balanceText;
-
-    if (cssSelector) {
+      console.log(`🔍 Fetching balance dynamically using Selenium from: ${url}`);
+  
       try {
-        const el = await driver.findElement(By.css(cssSelector));
-        const inner = await el.getAttribute('innerHTML');
-
-        if (delimiterStart && delimiterEnd && inner.includes(delimiterStart) && inner.includes(delimiterEnd)) {
-          const startIndex = inner.indexOf(delimiterStart);
-          const endIndex = inner.indexOf(delimiterEnd, startIndex + delimiterStart.length);
-          if (startIndex !== -1 && endIndex !== -1) {
-            balanceText = inner.substring(startIndex + delimiterStart.length, endIndex).trim();
-            console.log(`🔍 Balance trouvée avec CSS + délimiteurs : ${balanceText}`);
+        execSync('pkill chrome || pkill chromium || pkill -f chromedriver', { stdio: 'ignore' });
+        console.log('✅ Chrome instances killed successfully.');
+      } catch (e) {
+        console.warn('⚠️ No running Chrome instances found.');
+      }
+  
+      const userDataDir = path.join(os.tmpdir(), `selenium-profile-${Date.now()}`);
+      fs.mkdirSync(userDataDir, { recursive: true });
+  
+      const options = new chrome.Options().addArguments(
+        '--headless', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
+        '--disable-software-rasterizer', '--disable-blink-features=AutomationControlled',
+        '--remote-debugging-port=9222', `--user-data-dir=${userDataDir}`, '--no-first-run', '--disable-extensions'
+      );
+  
+      const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
+      await driver.get(url);
+  
+      const html = await driver.getPageSource();
+      console.log('\n===== 🧪 HTML complet extrait par Selenium (début) =====');
+      console.log(html);
+      console.log('=======================================================\n');
+  
+      let balanceText;
+  
+      if (cssSelector) {
+        try {
+          const el = await driver.findElement(By.css(cssSelector));
+          const inner = await el.getAttribute('innerHTML');
+  
+          if (delimiterStart && delimiterEnd && inner.includes(delimiterStart) && inner.includes(delimiterEnd)) {
+            const startIndex = inner.indexOf(delimiterStart);
+            const endIndex = inner.indexOf(delimiterEnd, startIndex + delimiterStart.length);
+            if (startIndex !== -1 && endIndex !== -1) {
+              balanceText = inner.substring(startIndex + delimiterStart.length, endIndex).trim();
+              console.log(`🔍 Balance trouvée avec CSS + délimiteurs : ${balanceText}`);
+            }
+          }
+  
+          if (!balanceText) {
+            balanceText = await el.getText();
+            console.log(`✅ Balance récupérée avec sélecteur CSS : ${balanceText}`);
+          }
+        } catch {
+          console.warn(`⚠️ Sélecteur CSS '${cssSelector}' introuvable ou erreur.`);
+        }
+      }
+  
+      if (!balanceText) {
+        const paragraphs = await driver.findElements(By.css('p'));
+        console.log(`🔎 ${paragraphs.length} balises <p> trouvées :`);
+        for (const p of paragraphs) {
+          const text = await p.getText();
+          console.log('👉', text);
+          if (text && text.match(/[0-9]{1,3}([.,][0-9]{3})*([.,][0-9]+)?/)) {
+            balanceText = text;
+            console.log('🔄 Balance trouvée dynamiquement dans un <p>: ' + balanceText + '\n');
+            console.log('============== End of Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
+            break;
           }
         }
-
-        if (!balanceText) {
-          balanceText = await el.getText();
-          console.log(`✅ Balance récupérée avec sélecteur CSS : ${balanceText}`);
-        }
-      } catch {
-        console.warn(`⚠️ Sélecteur CSS '${cssSelector}' introuvable ou erreur.`);
       }
+  
+      await driver.quit();
+  
+      if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
+      const clean = parseFloat(balanceText.replace(/[^\d.,]/g, '').replace(',', ''));
+      if (isNaN(clean)) throw new Error(`⚠️ Échec de parsing du solde: '${balanceText}'`);
+  
+      console.log(`✅ Balance extraite: ${clean}`);
+      return clean;
+    } catch (error) {
+      console.error('❌ Error fetching balance with Selenium:', error.message);
+      return { error: 'Failed to fetch balance dynamically' };
+      console.log('============== End of Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
     }
-
-    if (!balanceText) {
-      const paragraphs = await driver.findElements(By.css('p'));
-      console.log(`🔎 ${paragraphs.length} balises <p> trouvées :`);
-      for (const p of paragraphs) {
-        const text = await p.getText();
-        console.log('👉', text);
-        if (text && text.match(/[0-9]{1,3}([.,][0-9]{3})*([.,][0-9]+)?/)) {
-          balanceText = text;
-          console.log('🔄 Balance trouvée dynamiquement dans un <p>: ' + balanceText + '\n');
-          console.log('============== End of Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
-          break;
-        }
-      }
-    }
-
-    await driver.quit();
-
-    if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
-    const clean = parseFloat(balanceText.replace(/[^\d.,]/g, '').replace(',', ''));
-    if (isNaN(clean)) throw new Error(`⚠️ Échec de parsing du solde: '${balanceText}'`);
-
-    console.log(`✅ Balance extraite: ${clean}`);
-    return clean;
-  } catch (error) {
-    console.error('❌ Error fetching balance with Selenium:', error.message);
-    return { error: 'Failed to fetch balance dynamically' };
     console.log('============== End of Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
-  }
-  console.log('============== End of Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
+  }    
 };
 
 // ✅ Route pour ajouter une adresse crypto
