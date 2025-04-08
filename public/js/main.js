@@ -191,6 +191,10 @@ async function deleteWallet(id) {
   }
 
   window.refreshWallet = refreshWallet; // Rend accessible à l’extérieur
+  window.deleteWallet = deleteWallet;   // ✅ Ajout nécessaire !
+  window.loadWallets = loadWallets;     // (optionnel si utilisé ailleurs)
+
   loadWallets();
   fetchBalances();
 });
+
