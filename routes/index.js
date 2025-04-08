@@ -127,6 +127,7 @@ const getBalanceFull = async (url, cssSelector, delimiterStart, delimiterEnd) =>
   } catch (error) {
     console.error('❌ Error fetching balance with Selenium:', error.message);
     return { error: 'Failed to fetch balance dynamically' };
+    console.log('============== End of Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
   }
   console.log('============== End of Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
 };
