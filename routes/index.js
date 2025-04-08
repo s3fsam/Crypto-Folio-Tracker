@@ -23,30 +23,32 @@ const getBalanceWithSeleniumFallback = async (url, delimiterStart, delimiterEnd,
 };
 
 // ✅ Fonction 2 : URL + délimiteurs HTML (axios)
-const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
-  try {
-    console.log('============== Start Axios Function 2 ! Url & Delim 1 & 2 only ==============================\n');
-    const response = await axios.get(url);
-    const data = response.data;
-
-    console.log('\n===== 🔍 HTML reçu depuis Axios (début) =====');
-    console.log(data);
-    console.log('============================================\n');
-
-    const startIndex = data.indexOf(delimiterStart);
-    if (startIndex === -1) throw new Error(`Délimiteur de début introuvable.`);
-    const endIndex = data.indexOf(delimiterEnd, startIndex + delimiterStart.length);
-    if (endIndex === -1) throw new Error(`Délimiteur de fin introuvable.`);
-
-    const balanceText = data.substring(startIndex + delimiterStart.length, endIndex).trim();
-    const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
-    if (isNaN(balance)) throw new Error(`⚠️ Balance extraction failed. Raw: '${balanceText}'`);
-    return balance;
-  } catch (error) {
-    console.error('❌ Error fetching balance with delimiters:', error.message);
-    return { error: 'Failed to fetch balance with delimiters' };
-  }
-   console.log('============== End of Axios Function 2 ! Url & Delim 1 & 2 only ==============================\n');
+const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd, cssSelector) => {
+  if (url && delimiterStart && delimiterEnd && !cssSelector ) {
+    try {
+      console.log('============== Start Axios Function 2 ! Url & Delim 1 & 2 only ==============================\n');
+      const response = await axios.get(url);
+      const data = response.data;
+  
+      console.log('\n===== 🔍 HTML reçu depuis Axios (début) =====');
+      console.log(data);
+      console.log('============================================\n');
+  
+      const startIndex = data.indexOf(delimiterStart);
+      if (startIndex === -1) throw new Error(`Délimiteur de début introuvable.`);
+      const endIndex = data.indexOf(delimiterEnd, startIndex + delimiterStart.length);
+      if (endIndex === -1) throw new Error(`Délimiteur de fin introuvable.`);
+  
+      const balanceText = data.substring(startIndex + delimiterStart.length, endIndex).trim();
+      const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ""));
+      if (isNaN(balance)) throw new Error(`⚠️ Balance extraction failed. Raw: '${balanceText}'`);
+      return balance;
+    } catch (error) {
+      console.error('❌ Error fetching balance with delimiters:', error.message);
+      return { error: 'Failed to fetch balance with delimiters' };
+    }
+     console.log('============== End of Axios Function 2 ! Url & Delim 1 & 2 only ==============================\n');
+  }  
 };
 
 // ✅ Fonction 3 & 4 : via Selenium avec ou sans CSS + délimiteurs
