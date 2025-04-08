@@ -43,7 +43,7 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
     console.error('❌ Error fetching balance with delimiters:', error.message);
     return { error: 'Failed to fetch balance with delimiters' };
   }
-   console.log('============== End of Axios Function 2 ! ==============================\n');
+   console.log('============== End of Axios Function 2 ! Url & Delim 1 & 2 only ==============================\n');
 };
 
 // ✅ Fonction 3 & 4 : via Selenium avec ou sans CSS + délimiteurs
@@ -109,7 +109,8 @@ const getBalanceFull = async (url, cssSelector, delimiterStart, delimiterEnd) =>
         console.log('👉', text);
         if (text && text.match(/[0-9]{1,3}([.,][0-9]{3})*([.,][0-9]+)?/)) {
           balanceText = text;
-          console.log('🔄 Balance trouvée dynamiquement dans un <p>: ' + balanceText);
+          console.log('🔄 Balance trouvée dynamiquement dans un <p>: ' + balanceText + '\n');
+          console.log('============== End of Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
           break;
         }
       }
@@ -127,7 +128,7 @@ const getBalanceFull = async (url, cssSelector, delimiterStart, delimiterEnd) =>
     console.error('❌ Error fetching balance with Selenium:', error.message);
     return { error: 'Failed to fetch balance dynamically' };
   }
-  console.log('============== End Selenium Function ! Css Selector + Delim 1 & 2 ==============================\n');
+  console.log('============== End of Selenium Function 3 & 4 ! Css Selector + Delim 1 & 2 ==============================\n');
 };
 
 // ✅ Route pour ajouter une adresse crypto
