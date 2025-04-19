@@ -33,7 +33,7 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd, cssSe
   
       console.log('\n===== 🔍 HTML reçu depuis Axios (début) =====');
       console.log(data);
-      console.log('============================================\n');
+      console.log('======== Fin HTML reçu depuis Axios (début) ====\n');
   
       const startIndex = data.indexOf(delimiterStart);
       if (startIndex === -1) throw new Error(`Délimiteur de début introuvable.`);
