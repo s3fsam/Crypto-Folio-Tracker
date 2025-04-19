@@ -129,6 +129,26 @@ const getBalanceFull = async (url, delimiterStart, delimiterEnd ,cssSelector) =>
   }
 };
 
+// ✅ Route Page d’accueil
+router.get('/', async (req, res) => {
+  try {
+    const pricesResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
+    const { bitcoin, ethereum } = pricesResponse.data;
+    const cryptos = await Crypto.find({}, 'id name');
+
+    res.render('layouts/layout', {
+      title: 'Home',
+      bitcoinPrice: bitcoin.usd,
+      ethereumPrice: ethereum.usd,
+      cryptos
+    });
+  } catch (error) {
+    console.error('❌ Error fetching data:', error.message);
+    res.status(500).send('Erreur lors du chargement de la page');
+  }
+});
+
+
 // ✅ Route pour ajouter une adresse crypto
 router.post('/add-crypto-address', async (req, res) => {
   let { crypto, address, delimiterStart, delimiterEnd, cssSelector } = req.body;
