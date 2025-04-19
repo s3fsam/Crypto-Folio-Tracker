@@ -17,8 +17,9 @@ const Crypto = require('../models/Crypto_List');
 const getBalanceWithSeleniumFallback = async (url, delimiterStart, delimiterEnd, cssSelector) => {
   //if (url && !delimiterStart && !delimiterEnd && !cssSelector ) {
   console.log('============== Start Selenium Function 1 ! Url only ==============================\n');
+  console.log('============== Cette fonction appelle la Function 3 & 4 ==========================\n');
+  console.log('============== End Selenium Function 1 ! Url only ================================\n');
   return await getBalanceFull(url, null, null, null);
-  console.log('============== End Selenium Function 1 ! Url only ==============================\n');
   //}
 };
 
