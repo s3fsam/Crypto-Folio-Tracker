@@ -138,7 +138,7 @@ router.post('/add-crypto-address', async (req, res) => {
     return res.status(400).json({ error: 'Crypto and address are required' });
   }
 
-  console.log('🔧 Champs reçus :', { url, delimiterStart, delimiterEnd, cssSelector });
+  console.log('🔧 Champs reçus :', { address, delimiterStart, delimiterEnd, cssSelector });
   
   // Sécurisation des entrées utilisateur
   delimiterStart = typeof delimiterStart === 'string' ? delimiterStart.trim() : '';
