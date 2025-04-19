@@ -46,10 +46,10 @@ const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd, cssSe
       return balance;
     } catch (error) {
       console.error('❌ Error fetching balance with delimiters:', error.message);
+      console.log('============== End of Axios Function 2 ! Url & Delim 1 & 2 only ==============================\n');
       return { error: 'Failed to fetch balance with delimiters' };
     }
-     console.log('============== End of Axios Function 2 ! Url & Delim 1 & 2 only ==============================\n');
-  //}  
+    //}  
 };
 
 // ✅ Fonction 3 & 4 : via Selenium avec ou sans CSS + délimiteurs
