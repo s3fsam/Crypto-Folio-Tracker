@@ -147,7 +147,7 @@ router.post('/add-crypto-address', async (req, res) => {
     let balance;
 
     // ✅ Priorité : CSS + delimiteurs
-    if (cssSelector && delimiterStart && delimiterEnd) {
+    if ( delimiterStart && delimiterEnd && cssSelector ) {
       balance = await getBalanceFull(address, delimiterStart, delimiterEnd, cssSelector);
 
     // ✅ Sinon : uniquement delimiteurs
