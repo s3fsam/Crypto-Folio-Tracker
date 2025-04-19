@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const response = await fetch('/add-crypto-address', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ crypto, address, delimiterStart, delimiterEnd })
+      body: JSON.stringify({ crypto, address, delimiterStart, delimiterEnd, cssSelector })
     });
 
     const result = await response.json();
