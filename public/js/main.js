@@ -77,7 +77,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const address = document.getElementById('address').value.trim();
     const delimiterStart = document.getElementById('delimiterStart').value.trim();
     const delimiterEnd = document.getElementById('delimiterEnd').value.trim();
-
+    const cssSelector  = document.getElementById('cssSelector ').value.trim();
+    
     if (!crypto || !address) {
       alert('Veuillez remplir tous les champs requis');
       return;
