@@ -13,8 +13,8 @@ const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List');
 
 // ✅ Fonction 1 : Seulement URL avec parsing automatique
-
-const getBalanceWithSeleniumFallback = async (url, delimiterStart, delimiterEnd, cssSelector) => {
+// Backup : const getBalanceWithSeleniumFallback = async (url, delimiterStart, delimiterEnd, cssSelector) => {
+const getBalanceWithSeleniumFallback = async (url) => {
   //if (url && !delimiterStart && !delimiterEnd && !cssSelector ) {
   console.log('============== Start Selenium Function 1 ! Url only ==============================\n');
   console.log('============== Cette fonction appelle la Function 3 & 4 ==========================\n');
@@ -24,7 +24,7 @@ const getBalanceWithSeleniumFallback = async (url, delimiterStart, delimiterEnd,
 };
 
 // ✅ Fonction 2 : URL + délimiteurs HTML (axios)
-const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd, cssSelector) => {
+const getBalanceFromDelimiters = async (url, delimiterStart, delimiterEnd) => {
   //if (url && delimiterStart && delimiterEnd && !cssSelector ) {
     try {
       console.log('============== Start Axios Function 2 ! Url & Delim 1 & 2 only ==============================\n');
