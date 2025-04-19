@@ -131,25 +131,33 @@ const getBalanceFull = async (url, delimiterStart, delimiterEnd ,cssSelector) =>
 
 // ✅ Route pour ajouter une adresse crypto
 router.post('/add-crypto-address', async (req, res) => {
-  const { crypto, address, delimiterStart, delimiterEnd, cssSelector } = req.body;
+  let { crypto, address, delimiterStart, delimiterEnd, cssSelector } = req.body;
 
   if (!crypto || !address) {
     return res.status(400).json({ error: 'Crypto and address are required' });
   }
 
-  const css = typeof cssSelector === 'string' ? cssSelector.trim() : '';
-  const delimStart = typeof delimiterStart === 'string' ? delimiterStart.trim() : '';
-  const delimEnd = typeof delimiterEnd === 'string' ? delimiterEnd.trim() : '';
+  // Sécurisation des entrées utilisateur
+  delimiterStart = typeof delimiterStart === 'string' ? delimiterStart.trim() : '';
+  delimiterEnd = typeof delimiterEnd === 'string' ? delimiterEnd.trim() : '';
+  cssSelector = typeof cssSelector === 'string' ? cssSelector.trim() : '';
 
   try {
     let balance;
 
-    if (css && delimStart && delimEnd) {
-      balance = await getBalanceFull(address, delimStart, delimEnd, css);
-    } else if (delimStart && delimEnd) {
-      balance = await getBalanceFromDelimiters(address, delimStart, delimEnd);
-    } else if (css) {
-      balance = await getBalanceFull(address, null, null, css);
+    // ✅ Priorité : CSS + delimiteurs
+    if (cssSelector && delimiterStart && delimiterEnd) {
+      balance = await getBalanceFull(address, delimiterStart, delimiterEnd, cssSelector);
+
+    // ✅ Sinon : uniquement delimiteurs
+    } else if (delimiterStart && delimiterEnd) {
+      balance = await getBalanceFromDelimiters(address, delimiterStart, delimiterEnd);
+
+    // ✅ Sinon : uniquement CSS
+    } else if (cssSelector) {
+      balance = await getBalanceFull(address, null, null, cssSelector);
+
+    // ✅ Fallback : URL seule
     } else {
       balance = await getBalanceWithSeleniumFallback(address);
     }
@@ -160,9 +168,9 @@ router.post('/add-crypto-address', async (req, res) => {
       crypto,
       address,
       balance,
-      delimiterStart: delimStart || undefined,
-      delimiterEnd: delimEnd || undefined,
-      cssSelector: css || undefined
+      delimiterStart: delimiterStart || undefined,
+      delimiterEnd: delimiterEnd || undefined,
+      cssSelector: cssSelector || undefined
     });
 
     await userCrypto.save();
@@ -173,6 +181,7 @@ router.post('/add-crypto-address', async (req, res) => {
     res.status(500).json({ error: 'Error adding crypto address' });
   }
 });
+
 
 // ✅ Les autres routes sont conservées telles quelles (refresh, get wallets, delete...)
 
