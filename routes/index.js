@@ -129,25 +129,6 @@ const getBalanceFull = async (url, delimiterStart, delimiterEnd ,cssSelector) =>
   }
 };
 
-// ✅ Route Page d’accueil
-router.get('/', async (req, res) => {
-  try {
-    const pricesResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
-    const { bitcoin, ethereum } = pricesResponse.data;
-    const cryptos = await Crypto.find({}, 'id name');
-
-    res.render('layouts/layout', {
-      title: 'Home',
-      bitcoinPrice: bitcoin.usd,
-      ethereumPrice: ethereum.usd,
-      cryptos
-    });
-  } catch (error) {
-    console.error('❌ Error fetching data:', error.message);
-    res.status(500).send('Erreur lors du chargement de la page');
-  }
-});
-
 
 // ✅ Route pour ajouter une adresse crypto
 router.post('/add-crypto-address', async (req, res) => {
@@ -202,6 +183,75 @@ router.post('/add-crypto-address', async (req, res) => {
   }
 });
 
+// ✅ Route pour rafraîchir un portefeuille
+router.post('/refresh-wallet-balance', async (req, res) => {
+  const { address } = req.body;
+  try {
+    const wallet = await UserCrypto.findOne({ address });
+    if (!wallet) return res.status(404).json({ error: 'Portefeuille introuvable' });
+
+    let balance;
+    if (wallet.cssSelector && wallet.delimiterStart && wallet.delimiterEnd) {
+      balance = await getBalanceFull(wallet.address, wallet.cssSelector, wallet.delimiterStart, wallet.delimiterEnd);
+    } else if (wallet.delimiterStart && wallet.delimiterEnd) {
+      balance = await getBalanceFromDelimiters(wallet.address, wallet.delimiterStart, wallet.delimiterEnd);
+    } else if (wallet.cssSelector) {
+      balance = await getBalanceFull(wallet.address, wallet.cssSelector, null, null);
+    } else {
+      balance = await getBalanceWithSeleniumFallback(wallet.address);
+    }
+
+    if (balance.error) return res.status(500).json({ error: balance.error });
+
+    wallet.balance = balance;
+    await wallet.save();
+    res.status(200).json(wallet);
+  } catch (err) {
+    console.error('❌ Erreur mise à jour solde:', err.message);
+    res.status(500).json({ error: 'Erreur mise à jour' });
+  }
+});
+
+// ✅ Page d’accueil
+router.get('/', async (req, res) => {
+  try {
+    const pricesResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
+    const { bitcoin, ethereum } = pricesResponse.data;
+    const cryptos = await Crypto.find({}, 'id name');
+
+    res.render('layouts/layout', {
+      title: 'Home',
+      bitcoinPrice: bitcoin.usd,
+      ethereumPrice: ethereum.usd,
+      cryptos
+    });
+  } catch (error) {
+    console.error('❌ Error fetching data:', error.message);
+    res.status(500).json({ error: 'Error fetching data' });
+  }
+});
+
+// ✅ Liste portefeuilles
+router.get('/wallets', async (req, res) => {
+  try {
+    const wallets = await UserCrypto.find();
+    res.status(200).json(wallets);
+  } catch (err) {
+    console.error('❌ Erreur récupération portefeuilles:', err.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ✅ Supprimer portefeuille
+router.delete('/wallets/:id', async (req, res) => {
+  try {
+    await UserCrypto.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Portefeuille supprimé.' });
+  } catch (err) {
+    console.error('Erreur suppression portefeuille:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // ✅ Les autres routes sont conservées telles quelles (refresh, get wallets, delete...)
 
