@@ -151,15 +151,29 @@ router.post('/add-crypto-address', async (req, res) => {
   try {
     let balance;
 
-    if (cssSelector?.trim() && delimiterStart?.trim() && delimiterEnd?.trim()) {
-      balance = await getBalanceFull(address, cssSelector, delimiterStart, delimiterEnd);
-    } else if (delimiterStart?.trim() && delimiterEnd?.trim()) {
-      balance = await getBalanceFromDelimiters(address, delimiterStart, delimiterEnd);
-    } else if (cssSelector?.trim()) {
-      balance = await getBalanceFull(address, cssSelector, null, null);
-    } else {
-      balance = await getBalanceWithSeleniumFallback(address);
-    }
+
+    const css = typeof cssSelector === 'string' ? cssSelector.trim() : '';
+    const delimStart = typeof delimiterStart === 'string' ? delimiterStart.trim() : '';
+    const delimEnd = typeof delimiterEnd === 'string' ? delimiterEnd.trim() : '';
+    if (css && delimStart && delimEnd) {
+      balance = await getBalanceFull(address, css, delimStart, delimEnd);
+    } else if (delimStart && delimEnd) {
+              balance = await getBalanceFromDelimiters(address, delimStart, delimEnd);
+           } else if (css) {
+                    balance = await getBalanceFull(address, css, null, null);
+                  } else {
+                          balance = await getBalanceWithSeleniumFallback(address);
+                        }
+
+    //if (cssSelector?.trim() && delimiterStart?.trim() && delimiterEnd?.trim()) {
+      //balance = await getBalanceFull(address, cssSelector, delimiterStart, delimiterEnd);
+    //} else if (delimiterStart?.trim() && delimiterEnd?.trim()) {
+      //balance = await getBalanceFromDelimiters(address, delimiterStart, delimiterEnd);
+    //} else if (cssSelector?.trim()) {
+      //balance = await getBalanceFull(address, cssSelector, null, null);
+    //} else {
+      //balance = await getBalanceWithSeleniumFallback(address);
+   //}
 
     if (balance.error) return res.status(500).json({ error: balance.error });
 
