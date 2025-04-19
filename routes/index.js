@@ -12,6 +12,10 @@ const { execSync } = require('child_process');
 const UserCrypto = require('../models/User_Crypto');
 const Crypto = require('../models/Crypto_List');
 
+const css = typeof cssSelector === 'string' ? cssSelector.trim() : '';
+const delimStart = typeof delimiterStart === 'string' ? delimiterStart.trim() : '';
+const delimEnd = typeof delimiterEnd === 'string' ? delimiterEnd.trim() : '';
+
 // ✅ Fonction 1 : Seulement URL avec parsing automatique
 // Backup : const getBalanceWithSeleniumFallback = async (url, delimiterStart, delimiterEnd, cssSelector) => {
 const getBalanceWithSeleniumFallback = async (url) => {
@@ -151,10 +155,10 @@ router.post('/add-crypto-address', async (req, res) => {
   try {
     let balance;
 
-
-    const css = typeof cssSelector === 'string' ? cssSelector.trim() : '';
-    const delimStart = typeof delimiterStart === 'string' ? delimiterStart.trim() : '';
-    const delimEnd = typeof delimiterEnd === 'string' ? delimiterEnd.trim() : '';
+    //const css = typeof cssSelector === 'string' ? cssSelector.trim() : '';
+    //const delimStart = typeof delimiterStart === 'string' ? delimiterStart.trim() : '';
+    //const delimEnd = typeof delimiterEnd === 'string' ? delimiterEnd.trim() : '';
+    
     if (css && delimStart && delimEnd) {
       balance = await getBalanceFull(address, css, delimStart, delimEnd);
     } else if (delimStart && delimEnd) {
