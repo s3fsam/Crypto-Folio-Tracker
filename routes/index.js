@@ -206,7 +206,7 @@ router.post('/refresh-wallet-balance', async (req, res) => {
 
     let balance;
     if (wallet.cssSelector && wallet.delimiterStart && wallet.delimiterEnd) {
-      balance = await getBalanceFull(wallet.address, wallet.cssSelector, wallet.delimiterStart, wallet.delimiterEnd);
+      balance = await getBalanceFull(wallet.address, wallet.delimiterStart, wallet.delimiterEnd, wallet.cssSelector);
     } else if (wallet.delimiterStart && wallet.delimiterEnd) {
       balance = await getBalanceFromDelimiters(wallet.address, wallet.delimiterStart, wallet.delimiterEnd);
     } else if (wallet.cssSelector) {
