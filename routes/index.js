@@ -117,21 +117,24 @@ const getBalanceFull = async (url, delimiterStart, delimiterEnd ,cssSelector) =>
 
     await driver.quit();
 
-        if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
+    if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
 
     // ✅ Traitement rétrocompatible
     let cleanedText = balanceText.replace(/[^\d.,]/g, '');
     const commaCount = (cleanedText.match(/,/g) || []).length;
     const dotCount = (cleanedText.match(/\./g) || []).length;
 
-    if (commaCount > 1) {
+    if (commaCount > 1 || (commaCount === 1 && dotCount === 1)) {
+      // Ex: "12,226.1643" => "12226.1643"
       cleanedText = cleanedText.replace(/,/g, '');
     } else if (commaCount === 1 && dotCount === 0) {
+      // Ex: "12226,1643" => "12226.1643"
       cleanedText = cleanedText.replace(',', '.');
     }
 
     const clean = parseFloat(cleanedText);
     if (isNaN(clean)) throw new Error(`⚠️ Échec de parsing du solde: '${balanceText}'`);
+   
 
     console.log(`✅ Balance extraite: ${clean}`);
     return clean;
