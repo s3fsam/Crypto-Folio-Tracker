@@ -117,8 +117,20 @@ const getBalanceFull = async (url, delimiterStart, delimiterEnd ,cssSelector) =>
 
     await driver.quit();
 
-    if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
-    const clean = parseFloat(balanceText.replace(/[^\d.,]/g, '').replace(',', ''));
+        if (!balanceText) throw new Error(`⚠️ Balance non trouvée.`);
+
+    // ✅ Traitement rétrocompatible
+    let cleanedText = balanceText.replace(/[^\d.,]/g, '');
+    const commaCount = (cleanedText.match(/,/g) || []).length;
+    const dotCount = (cleanedText.match(/\./g) || []).length;
+
+    if (commaCount > 1) {
+      cleanedText = cleanedText.replace(/,/g, '');
+    } else if (commaCount === 1 && dotCount === 0) {
+      cleanedText = cleanedText.replace(',', '.');
+    }
+
+    const clean = parseFloat(cleanedText);
     if (isNaN(clean)) throw new Error(`⚠️ Échec de parsing du solde: '${balanceText}'`);
 
     console.log(`✅ Balance extraite: ${clean}`);
