@@ -196,7 +196,7 @@ async function loadWallets() {
   window.refreshWallet = refreshWallet;
   window.deleteWallet = deleteWallet;
   window.loadWallets = loadWallets;
-  window.showWalletDetails = showWalletDetails; // ✅ Ajout obligatoire pour l'affichage
+  //window.showWalletDetails = showWalletDetails; // ✅ Ajout obligatoire pour l'affichage
 
   loadWallets();
   fetchBalances();
