@@ -126,37 +126,36 @@ document.addEventListener('DOMContentLoaded', function () {
     totalBalanceElement.textContent = totalBalance.toFixed(2);
   }
 
-async function loadWallets() {
-  const walletsList = document.getElementById('wallets-list');
-  const totalBalanceEl = document.getElementById('current-balance');
-  walletsList.innerHTML = '';
-  let total = 0;
+  async function loadWallets() {
+    const walletsList = document.getElementById('wallets-list');
+    const totalBalanceEl = document.getElementById('current-balance');
+    walletsList.innerHTML = '';
+    let total = 0;
 
-  const response = await fetch('/wallets');
-  const wallets = await response.json();
+    const response = await fetch('/wallets');
+    const wallets = await response.json();
 
-  wallets.forEach(wallet => {
-    const isUrl = wallet.address.startsWith("http://") || wallet.address.startsWith("https://");
+    wallets.forEach(wallet => {
+      const isUrl = wallet.address.startsWith("http://") || wallet.address.startsWith("https://");
 
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${wallet.crypto}</td>
-      <td>${isUrl ? `<a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a>` : wallet.address}</td>
-      <td>${wallet.balance}</td>
-      <td>${wallet.usdValue || 0}</td>
-      <td>
-        <button onclick="refreshWallet('${wallet.address}')">🔄</button>
-        <button onclick="showWalletDetails('${wallet.delimiterStart || ''}', '${wallet.delimiterEnd || ''}', '${wallet.cssSelector || ''}')">📑</button>
-        <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
-      </td>
-    `;
-    walletsList.appendChild(row);
-    total += wallet.usdValue || 0;
-  });
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${wallet.crypto}</td>
+        <td>${isUrl ? `<a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a>` : wallet.address}</td>
+        <td>${wallet.balance}</td>
+        <td>${wallet.usdValue || 0}</td>
+        <td>
+          <button onclick="refreshWallet('${wallet.address}')">🔄</button>
+          <button onclick="showWalletDetails('${wallet.delimiterStart || ''}', '${wallet.delimiterEnd || ''}', '${wallet.cssSelector || ''}')">📑</button>
+          <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
+        </td>
+      `;
+      walletsList.appendChild(row);
+      total += wallet.usdValue || 0;
+    });
 
-  if (totalBalanceEl) totalBalanceEl.textContent = total.toFixed(2);
-}
-
+    if (totalBalanceEl) totalBalanceEl.textContent = total.toFixed(2);
+  }
 
   async function deleteWallet(id) {
     if (!confirm("Voulez-vous vraiment supprimer ce portefeuille ?")) return;
@@ -187,16 +186,17 @@ async function loadWallets() {
   }
 
   function showWalletDetails(delimiterStart, delimiterEnd, cssSelector) {
-    alert(`🔎 Délimiteurs et Sélecteur :
-- delimiterStart: ${delimiterStart || 'N/A'}
-- delimiterEnd: ${delimiterEnd || 'N/A'}
-- cssSelector: ${cssSelector || 'N/A'}`);
+    alert(`🔎 Détails du portefeuille :
+- Délimiteur Début : ${delimiterStart || 'N/A'}
+- Délimiteur Fin : ${delimiterEnd || 'N/A'}
+- Sélecteur CSS : ${cssSelector || 'N/A'}`);
   }
 
+  // ✅ Rendre les fonctions accessibles globalement
   window.refreshWallet = refreshWallet;
   window.deleteWallet = deleteWallet;
   window.loadWallets = loadWallets;
-  //window.showWalletDetails = showWalletDetails; // ✅ Ajout obligatoire pour l'affichage
+  window.showWalletDetails = showWalletDetails; // <-- Ajout obligatoire ici aussi !!
 
   loadWallets();
   fetchBalances();
