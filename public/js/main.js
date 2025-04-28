@@ -1,7 +1,4 @@
 document.addEventListener('DOMContentLoaded', function () {
-  let currentPrices = {}; // 🧠 Stockage des prix en mémoire
-  const usdToEurRate = 0.93; // Taux USD -> EUR fixe (option d'amélioration plus tard)
-
   const cryptoDropdown = document.getElementById('crypto-dropdown');
   const refreshButton = document.getElementById('refresh-cryptocurrencies-btn');
   const ctx = document.getElementById('crypto-chart')?.getContext('2d');
@@ -13,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const response = await fetch(`https://api.coingecko.com/api/v3/coins/${cryptoId}/market_chart?vs_currency=usd&days=30`);
       if (!response.ok) throw new Error('Erreur lors de la récupération des données de marché.');
-      
+
       const data = await response.json();
       const labels = data.prices.map(price => new Date(price[0]).toLocaleDateString());
       const prices = data.prices.map(price => price[1]);
@@ -45,20 +42,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  async function fetchPrices() {
-    try {
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,kaspa,qubic,ergo,ubiq,etc,dynex,ravencoin,alephium&vs_currencies=usd');
-      if (!response.ok) throw new Error('Erreur récupération prix');
-
-      const data = await response.json();
-      currentPrices = data;
-      console.log('✅ Prix mis à jour depuis CoinGecko:', currentPrices);
-    } catch (error) {
-      console.error('❌ Impossible de récupérer les prix:', error.message);
-      alert('Erreur récupération prix crypto');
-    }
-  }
-
   if (cryptoDropdown) {
     cryptoDropdown.addEventListener('change', function () {
       fetchAndDisplayCryptoData(this.value);
@@ -66,15 +49,13 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   if (refreshButton) {
-    refreshButton.addEventListener('click', async function () {
+    refreshButton.addEventListener("click", async function () {
       try {
-        await fetchPrices(); // 🆕 On recharge aussi les prix !
         const response = await fetch('/refresh-cryptocurrencies');
         if (!response.ok) throw new Error('Erreur de rafraîchissement');
         alert('✅ Cryptocurrencies rafraîchies avec succès !');
         const data = await response.json();
         updateCryptoDropdown(data);
-        await loadWallets(); // 🆕 Recharge wallets avec prix mis à jour
       } catch (error) {
         alert('❌ Erreur lors du rafraîchissement');
         console.error(error);
@@ -93,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const delimiterStart = document.getElementById('delimiterStart')?.value.trim();
     const delimiterEnd = document.getElementById('delimiterEnd')?.value.trim();
     const cssSelector = document.getElementById('cssSelector')?.value.trim();
-    
+
     if (!crypto || !address) {
       alert('Veuillez remplir tous les champs requis');
       return;
@@ -157,36 +138,43 @@ document.addEventListener('DOMContentLoaded', function () {
     wallets.forEach(wallet => {
       const isUrl = wallet.address.startsWith("http://") || wallet.address.startsWith("https://");
 
-      const symbol = wallet.crypto.toLowerCase();
-      let usdValue = 0;
-      let eurValue = 0;
-
-      // 🧠 Si prix connu, on calcule !
-      for (const key in currentPrices) {
-        if (symbol.includes(key)) {
-          usdValue = (wallet.balance * currentPrices[key].usd).toFixed(2);
-          eurValue = (usdValue * usdToEurRate).toFixed(2);
-          break;
-        }
-      }
-
       const row = document.createElement('tr');
+
+      // Création manuelle de toutes les cellules
       row.innerHTML = `
         <td>${wallet.crypto}</td>
         <td>${isUrl ? `<a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a>` : wallet.address}</td>
         <td>${wallet.balance}</td>
-        <td>${usdValue} $ / ${eurValue} €</td>
-        <td>
-          <button onclick="refreshWallet('${wallet.address}')">🔄</button>
-          <button onclick="showWalletDetails('${wallet.delimiterStart || ''}', '${wallet.delimiterEnd || ''}', '${wallet.cssSelector || ''}')">📑</button>
-          <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
-        </td>
+        <td>${wallet.usdValue || 0}</td>
+        <td></td>
       `;
+
+      const actionsCell = row.querySelector('td:last-child');
+
+      // Bouton refresh
+      const refreshBtn = document.createElement('button');
+      refreshBtn.innerHTML = '🔄';
+      refreshBtn.addEventListener('click', () => refreshWallet(wallet.address));
+      actionsCell.appendChild(refreshBtn);
+
+      // Bouton détails 📑
+      const detailsBtn = document.createElement('button');
+      detailsBtn.innerHTML = '📑';
+      detailsBtn.addEventListener('click', () => showWalletDetails(wallet.delimiterStart || '', wallet.delimiterEnd || '', wallet.cssSelector || ''));
+      actionsCell.appendChild(detailsBtn);
+
+      // Bouton delete 🗑️
+      const deleteBtn = document.createElement('button');
+      deleteBtn.innerHTML = '🗑️';
+      deleteBtn.addEventListener('click', () => deleteWallet(wallet._id));
+      actionsCell.appendChild(deleteBtn);
+
       walletsList.appendChild(row);
-      total += parseFloat(usdValue) || 0;
+
+      total += wallet.usdValue || 0;
     });
 
-    if (totalBalanceEl) totalBalanceEl.textContent = total.toFixed(2) + " $";
+    if (totalBalanceEl) totalBalanceEl.textContent = total.toFixed(2);
   }
 
   async function deleteWallet(id) {
@@ -224,14 +212,12 @@ document.addEventListener('DOMContentLoaded', function () {
 - Sélecteur CSS : ${cssSelector || 'N/A'}`);
   }
 
+  // ✅ Rendre les fonctions accessibles globalement
   window.refreshWallet = refreshWallet;
   window.deleteWallet = deleteWallet;
   window.loadWallets = loadWallets;
   window.showWalletDetails = showWalletDetails;
 
-  // 🆕 Avant tout, on récupère les prix !
-  fetchPrices().then(() => {
-    loadWallets();
-    fetchBalances();
-  });
+  loadWallets();
+  fetchBalances();
 });
