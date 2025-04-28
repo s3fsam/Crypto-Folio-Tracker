@@ -221,6 +221,10 @@ router.post('/refresh-wallet-balance', async (req, res) => {
     if (balance.error) return res.status(500).json({ error: balance.error });
 
     wallet.balance = balance;
+    console.log(`🔎 Détails utilisés pour le refresh: 
+    - delimiterStart: ${wallet.delimiterStart || 'N/A'}
+    - delimiterEnd: ${wallet.delimiterEnd || 'N/A'}
+    - cssSelector: ${wallet.cssSelector || 'N/A'}`);
     await wallet.save();
     res.status(200).json(wallet);
   } catch (err) {
