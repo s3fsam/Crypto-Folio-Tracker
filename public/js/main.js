@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
+  let currentPrices = {}; // 🧠 Stocke les prix récupérés de CoinGecko
+  const usdToEurRate = 0.93; // 🧮 Taux fixe pour conversion USD -> EUR
+
   const cryptoDropdown = document.getElementById('crypto-dropdown');
   const refreshButton = document.getElementById('refresh-cryptocurrencies-btn');
   const ctx = document.getElementById('crypto-chart')?.getContext('2d');
@@ -42,6 +45,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  async function fetchPrices() {
+    try {
+      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,kaspa,qubic,ergo,ubiq,etc,dynex,ravencoin,alephium&vs_currencies=usd');
+      if (!response.ok) throw new Error('Erreur récupération prix');
+      currentPrices = await response.json();
+      console.log('✅ Prix mis à jour:', currentPrices);
+    } catch (error) {
+      console.error('❌ Impossible de récupérer les prix:', error.message);
+    }
+  }
+
   if (cryptoDropdown) {
     cryptoDropdown.addEventListener('change', function () {
       fetchAndDisplayCryptoData(this.value);
@@ -51,11 +65,13 @@ document.addEventListener('DOMContentLoaded', function () {
   if (refreshButton) {
     refreshButton.addEventListener("click", async function () {
       try {
+        await fetchPrices();
         const response = await fetch('/refresh-cryptocurrencies');
         if (!response.ok) throw new Error('Erreur de rafraîchissement');
         alert('✅ Cryptocurrencies rafraîchies avec succès !');
         const data = await response.json();
         updateCryptoDropdown(data);
+        await loadWallets();
       } catch (error) {
         alert('❌ Erreur lors du rafraîchissement');
         console.error(error);
@@ -137,33 +153,40 @@ document.addEventListener('DOMContentLoaded', function () {
 
     wallets.forEach(wallet => {
       const isUrl = wallet.address.startsWith("http://") || wallet.address.startsWith("https://");
-
       const row = document.createElement('tr');
 
-      // Création manuelle de toutes les cellules
+      let usdValue = 0;
+      let eurValue = 0;
+      const symbol = wallet.crypto.toLowerCase();
+
+      for (const key in currentPrices) {
+        if (symbol.includes(key)) {
+          usdValue = (wallet.balance * currentPrices[key].usd).toFixed(2);
+          eurValue = (usdValue * usdToEurRate).toFixed(2);
+          break;
+        }
+      }
+
       row.innerHTML = `
         <td>${wallet.crypto}</td>
         <td>${isUrl ? `<a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a>` : wallet.address}</td>
         <td>${wallet.balance}</td>
-        <td>${wallet.usdValue || 0}</td>
+        <td>${usdValue} $ / ${eurValue} €</td>
         <td></td>
       `;
 
       const actionsCell = row.querySelector('td:last-child');
 
-      // Bouton refresh
       const refreshBtn = document.createElement('button');
       refreshBtn.innerHTML = '🔄';
       refreshBtn.addEventListener('click', () => refreshWallet(wallet.address));
       actionsCell.appendChild(refreshBtn);
 
-      // Bouton détails 📑
       const detailsBtn = document.createElement('button');
       detailsBtn.innerHTML = '📑';
       detailsBtn.addEventListener('click', () => showWalletDetails(wallet.delimiterStart || '', wallet.delimiterEnd || '', wallet.cssSelector || ''));
       actionsCell.appendChild(detailsBtn);
 
-      // Bouton delete 🗑️
       const deleteBtn = document.createElement('button');
       deleteBtn.innerHTML = '🗑️';
       deleteBtn.addEventListener('click', () => deleteWallet(wallet._id));
@@ -171,10 +194,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
       walletsList.appendChild(row);
 
-      total += wallet.usdValue || 0;
+      total += parseFloat(usdValue) || 0;
     });
 
-    if (totalBalanceEl) totalBalanceEl.textContent = total.toFixed(2);
+    if (totalBalanceEl) totalBalanceEl.textContent = total.toFixed(2) + " $";
   }
 
   async function deleteWallet(id) {
@@ -212,12 +235,13 @@ document.addEventListener('DOMContentLoaded', function () {
 - Sélecteur CSS : ${cssSelector || 'N/A'}`);
   }
 
-  // ✅ Rendre les fonctions accessibles globalement
   window.refreshWallet = refreshWallet;
   window.deleteWallet = deleteWallet;
   window.loadWallets = loadWallets;
   window.showWalletDetails = showWalletDetails;
 
-  loadWallets();
-  fetchBalances();
+  fetchPrices().then(() => {
+    loadWallets();
+    fetchBalances();
+  });
 });
