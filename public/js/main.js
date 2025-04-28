@@ -148,10 +148,11 @@ async function loadWallets() {
       <td>${isUrl ? `<a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a>` : wallet.address}</td>
       <td>${wallet.balance}</td>
       <td>${wallet.usdValue || 0}</td>
-      <td>
+     <td>
         <button onclick="refreshWallet('${wallet.address}')">🔄</button>
+        <button onclick="showWalletDetails('${wallet.delimiterStart}', '${wallet.delimiterEnd}', '${wallet.cssSelector}')">📑</button>
         <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
-      </td>
+     </td>
     `;
     walletsList.appendChild(row);
     total += wallet.usdValue || 0;
@@ -189,6 +190,13 @@ async function deleteWallet(id) {
     } else {
       alert("❌ Erreur de mise à jour !");
     }
+  }
+
+  function showWalletDetails(delimiterStart, delimiterEnd, cssSelector) {
+  alert(`🔎 Délimiteurs et Sélecteur :
+  - delimiterStart: ${delimiterStart || 'N/A'}
+  - delimiterEnd: ${delimiterEnd || 'N/A'}
+  - cssSelector: ${cssSelector || 'N/A'}`);
   }
 
   window.refreshWallet = refreshWallet; // Rend accessible à l’extérieur
