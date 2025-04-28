@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const response = await fetch(`https://api.coingecko.com/api/v3/coins/${cryptoId}/market_chart?vs_currency=usd&days=30`);
       if (!response.ok) throw new Error('Erreur lors de la récupération des données de marché.');
-      
+
       const data = await response.json();
       const labels = data.prices.map(price => new Date(price[0]).toLocaleDateString());
       const prices = data.prices.map(price => price[1]);
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const delimiterStart = document.getElementById('delimiterStart')?.value.trim();
     const delimiterEnd = document.getElementById('delimiterEnd')?.value.trim();
     const cssSelector = document.getElementById('cssSelector')?.value.trim();
-    
+
     if (!crypto || !address) {
       alert('Veuillez remplir tous les champs requis');
       return;
@@ -139,18 +139,38 @@ document.addEventListener('DOMContentLoaded', function () {
       const isUrl = wallet.address.startsWith("http://") || wallet.address.startsWith("https://");
 
       const row = document.createElement('tr');
+
+      // Création manuelle de toutes les cellules
       row.innerHTML = `
         <td>${wallet.crypto}</td>
         <td>${isUrl ? `<a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a>` : wallet.address}</td>
         <td>${wallet.balance}</td>
         <td>${wallet.usdValue || 0}</td>
-        <td>
-          <button onclick="refreshWallet('${wallet.address}')">🔄</button>
-          <button onclick="showWalletDetails('${wallet.delimiterStart || ''}', '${wallet.delimiterEnd || ''}', '${wallet.cssSelector || ''}')">📑</button>
-          <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
-        </td>
+        <td></td>
       `;
+
+      const actionsCell = row.querySelector('td:last-child');
+
+      // Bouton refresh
+      const refreshBtn = document.createElement('button');
+      refreshBtn.innerHTML = '🔄';
+      refreshBtn.addEventListener('click', () => refreshWallet(wallet.address));
+      actionsCell.appendChild(refreshBtn);
+
+      // Bouton détails 📑
+      const detailsBtn = document.createElement('button');
+      detailsBtn.innerHTML = '📑';
+      detailsBtn.addEventListener('click', () => showWalletDetails(wallet.delimiterStart || '', wallet.delimiterEnd || '', wallet.cssSelector || ''));
+      actionsCell.appendChild(detailsBtn);
+
+      // Bouton delete 🗑️
+      const deleteBtn = document.createElement('button');
+      deleteBtn.innerHTML = '🗑️';
+      deleteBtn.addEventListener('click', () => deleteWallet(wallet._id));
+      actionsCell.appendChild(deleteBtn);
+
       walletsList.appendChild(row);
+
       total += wallet.usdValue || 0;
     });
 
@@ -196,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
   window.refreshWallet = refreshWallet;
   window.deleteWallet = deleteWallet;
   window.loadWallets = loadWallets;
-  window.showWalletDetails = showWalletDetails; // <-- Ajout obligatoire ici aussi !!
+  window.showWalletDetails = showWalletDetails;
 
   loadWallets();
   fetchBalances();
