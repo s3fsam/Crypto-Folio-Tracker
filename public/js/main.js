@@ -31,12 +31,8 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         options: {
           scales: {
-            x: {
-              title: { display: true, text: 'Date' }
-            },
-            y: {
-              title: { display: true, text: 'Price in USD' }
-            }
+            x: { title: { display: true, text: 'Date' } },
+            y: { title: { display: true, text: 'Price in USD' } }
           }
         }
       });
@@ -57,11 +53,11 @@ document.addEventListener('DOMContentLoaded', function () {
       try {
         const response = await fetch('/refresh-cryptocurrencies');
         if (!response.ok) throw new Error('Erreur de rafraîchissement');
-        alert('Cryptocurrencies refreshed successfully!');
+        alert('✅ Cryptocurrencies rafraîchies avec succès !');
         const data = await response.json();
         updateCryptoDropdown(data);
       } catch (error) {
-        alert('Erreur lors du rafraîchissement');
+        alert('❌ Erreur lors du rafraîchissement');
         console.error(error);
       }
     });
@@ -71,13 +67,13 @@ document.addEventListener('DOMContentLoaded', function () {
     fetchAndDisplayCryptoData(cryptoDropdown.value);
   }
 
-  document.getElementById('crypto-form').addEventListener('submit', async (e) => {
+  document.getElementById('crypto-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const crypto = document.getElementById('crypto').value.trim();
-    const address = document.getElementById('address').value.trim();
-    const delimiterStart = document.getElementById('delimiterStart').value.trim();
-    const delimiterEnd = document.getElementById('delimiterEnd').value.trim();
-    const cssSelector = document.getElementById('cssSelector').value.trim();
+    const crypto = document.getElementById('crypto')?.value.trim();
+    const address = document.getElementById('address')?.value.trim();
+    const delimiterStart = document.getElementById('delimiterStart')?.value.trim();
+    const delimiterEnd = document.getElementById('delimiterEnd')?.value.trim();
+    const cssSelector = document.getElementById('cssSelector')?.value.trim();
     
     if (!crypto || !address) {
       alert('Veuillez remplir tous les champs requis');
@@ -93,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const result = await response.json();
     if (response.ok) {
       alert('✅ Adresse ajoutée !');
-      await loadWallets(); // Rafraîchir le tableau après ajout
+      await loadWallets();
     } else {
       alert(result.error || 'Erreur lors de l’ajout');
     }
@@ -106,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const data = await response.json();
       updateBalances(data.balances);
     } catch (error) {
-      alert('Erreur lors de la récupération des soldes');
+      alert('❌ Erreur lors de la récupération des soldes');
       console.error(error.message);
     }
   }
@@ -130,52 +126,49 @@ document.addEventListener('DOMContentLoaded', function () {
     totalBalanceElement.textContent = totalBalance.toFixed(2);
   }
 
-async function loadWallets() {
-  const walletsList = document.getElementById('wallets-list');
-  const totalBalanceEl = document.getElementById('current-balance');
-  walletsList.innerHTML = '';
-  let total = 0;
+  async function loadWallets() {
+    const walletsList = document.getElementById('wallets-list');
+    const totalBalanceEl = document.getElementById('current-balance');
+    walletsList.innerHTML = '';
+    let total = 0;
 
-  const response = await fetch('/wallets');
-  const wallets = await response.json();
+    const response = await fetch('/wallets');
+    const wallets = await response.json();
 
-  wallets.forEach(wallet => {
-    const isUrl = wallet.address.startsWith("http://") || wallet.address.startsWith("https://");
+    wallets.forEach(wallet => {
+      const isUrl = wallet.address.startsWith("http://") || wallet.address.startsWith("https://");
 
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${wallet.crypto}</td>
-      <td>${isUrl ? `<a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a>` : wallet.address}</td>
-      <td>${wallet.balance}</td>
-      <td>${wallet.usdValue || 0}</td>
-     <td>
-        <button onclick="refreshWallet('${wallet.address}')">🔄</button>
-        <button onclick="showWalletDetails('${wallet.delimiterStart}', '${wallet.delimiterEnd}', '${wallet.cssSelector}')">📑</button>
-        <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
-     </td>
-    `;
-    walletsList.appendChild(row);
-    total += wallet.usdValue || 0;
-  });
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${wallet.crypto}</td>
+        <td>${isUrl ? `<a href="${wallet.address}" target="_blank" rel="noopener noreferrer">${wallet.address}</a>` : wallet.address}</td>
+        <td>${wallet.balance}</td>
+        <td>${wallet.usdValue || 0}</td>
+        <td>
+          <button onclick="refreshWallet('${wallet.address}')">🔄</button>
+          <button onclick="showWalletDetails('${wallet.delimiterStart || ''}', '${wallet.delimiterEnd || ''}', '${wallet.cssSelector || ''}')">📑</button>
+          <button onclick="deleteWallet('${wallet._id}')">🗑️</button>
+        </td>
+      `;
+      walletsList.appendChild(row);
+      total += wallet.usdValue || 0;
+    });
 
-  if (totalBalanceEl) totalBalanceEl.textContent = total.toFixed(2);
-}
-
-
-async function deleteWallet(id) {
-  if (!confirm("Voulez-vous vraiment supprimer ce portefeuille ?")) return;
-
-  const response = await fetch('/wallets/' + id, {
-    method: 'DELETE'
-  });
-
-  if (response.ok) {
-    alert("✅ Portefeuille supprimé !");
-    loadWallets();
-  } else {
-    alert("❌ Échec de la suppression !");
+    if (totalBalanceEl) totalBalanceEl.textContent = total.toFixed(2);
   }
-}
+
+  async function deleteWallet(id) {
+    if (!confirm("Voulez-vous vraiment supprimer ce portefeuille ?")) return;
+
+    const response = await fetch('/wallets/' + id, { method: 'DELETE' });
+
+    if (response.ok) {
+      alert("✅ Portefeuille supprimé !");
+      await loadWallets();
+    } else {
+      alert("❌ Échec de la suppression !");
+    }
+  }
 
   async function refreshWallet(address) {
     const res = await fetch('/refresh-wallet-balance', {
@@ -193,17 +186,17 @@ async function deleteWallet(id) {
   }
 
   function showWalletDetails(delimiterStart, delimiterEnd, cssSelector) {
-  alert(`🔎 Délimiteurs et Sélecteur :
-  - delimiterStart: ${delimiterStart || 'N/A'}
-  - delimiterEnd: ${delimiterEnd || 'N/A'}
-  - cssSelector: ${cssSelector || 'N/A'}`);
+    alert(`🔎 Délimiteurs et Sélecteur :
+- delimiterStart: ${delimiterStart || 'N/A'}
+- delimiterEnd: ${delimiterEnd || 'N/A'}
+- cssSelector: ${cssSelector || 'N/A'}`);
   }
 
-  window.refreshWallet = refreshWallet; // Rend accessible à l’extérieur
-  window.deleteWallet = deleteWallet;   // ✅ Ajout nécessaire !
-  window.loadWallets = loadWallets;     // (optionnel si utilisé ailleurs)
+  window.refreshWallet = refreshWallet;
+  window.deleteWallet = deleteWallet;
+  window.loadWallets = loadWallets;
+  window.showWalletDetails = showWalletDetails; // ✅ Ajout obligatoire pour l'affichage
 
   loadWallets();
   fetchBalances();
 });
-
