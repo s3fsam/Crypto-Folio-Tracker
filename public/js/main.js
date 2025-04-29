@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function () {
-  let currentPrices = {}; // 🧠 Stocke les prix récupérés de CoinGecko
-  const usdToEurRate = 0.93; // 🧮 Taux fixe pour conversion USD -> EUR
+  let currentPrices = {}; 
+  const usdToEurRate = 0.93;
 
   const cryptoDropdown = document.getElementById('crypto-dropdown');
   const refreshButton = document.getElementById('refresh-cryptocurrencies-btn');
@@ -47,9 +47,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
   async function fetchPrices() {
     try {
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,kaspa,qubic,ergo,ubiq,etc,dynex,ravencoin,alephium&vs_currencies=usd');
-      if (!response.ok) throw new Error('Erreur récupération prix');
-      currentPrices = await response.json();
+      const walletsResponse = await fetch('/wallets');
+      if (!walletsResponse.ok) throw new Error('Erreur récupération portefeuilles');
+
+      const wallets = await walletsResponse.json();
+      const uniqueCryptos = [...new Set(wallets.map(wallet => wallet.crypto.toLowerCase()))];
+      if (uniqueCryptos.length === 0) return console.warn('⚠️ Aucun portefeuille pour récupérer les prix.');
+
+      const ids = uniqueCryptos.join(',');
+      console.log('📦 Cryptos envoyées à CoinGecko:', ids);
+
+      const pricesResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd,eur`);
+      if (!pricesResponse.ok) throw new Error('Erreur récupération prix');
+
+      currentPrices = await pricesResponse.json();
       console.log('✅ Prix mis à jour:', currentPrices);
     } catch (error) {
       console.error('❌ Impossible de récupérer les prix:', error.message);
@@ -105,6 +116,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const result = await response.json();
     if (response.ok) {
       alert('✅ Adresse ajoutée !');
+      await fetchPrices(); // ← Mise à jour immédiate
       await loadWallets();
     } else {
       alert(result.error || 'Erreur lors de l’ajout');
@@ -159,12 +171,9 @@ document.addEventListener('DOMContentLoaded', function () {
       let eurValue = 0;
       const symbol = wallet.crypto.toLowerCase();
 
-      for (const key in currentPrices) {
-        if (symbol.includes(key)) {
-          usdValue = (wallet.balance * currentPrices[key].usd).toFixed(2);
-          eurValue = (usdValue * usdToEurRate).toFixed(2);
-          break;
-        }
+      if (currentPrices[symbol]) {
+        usdValue = (wallet.balance * currentPrices[symbol].usd).toFixed(2);
+        eurValue = (wallet.balance * currentPrices[symbol].eur).toFixed(2);
       }
 
       row.innerHTML = `
@@ -207,6 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (response.ok) {
       alert("✅ Portefeuille supprimé !");
+      await fetchPrices();
       await loadWallets();
     } else {
       alert("❌ Échec de la suppression !");
@@ -222,6 +232,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (res.ok) {
       alert("✅ Solde mis à jour !");
+      await fetchPrices();
       await loadWallets();
     } else {
       alert("❌ Erreur de mise à jour !");
