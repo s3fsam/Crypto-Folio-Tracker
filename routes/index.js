@@ -75,10 +75,10 @@ const getBalanceFull = async (url, delimiterStart, delimiterEnd ,cssSelector) =>
 
 
     // Juste après avoir lancé la page
-    await driver.get(url);
+    //await driver.get(url);
 
     // On attend explicitement que le loader disparaisse (timeout 20 sec ici)
-    await driver.wait(until.elementIsNotVisible(driver.findElement(By.id("app-loader"))), 20000);
+    //await driver.wait(until.elementIsNotVisible(driver.findElement(By.id("app-loader"))), 20000);
 
     // Maintenant on est certain que la page a fini de charger
     //let html = await driver.getPageSource();
