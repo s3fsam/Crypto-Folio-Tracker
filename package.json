@@ -14,8 +14,10 @@
     "body-parser": "^1.20.2",
     "chart.js": "^4.4.3",
     "cheerio": "^1.0.0-rc.12",
+    "chromedriver": "^137.0.0",
     "ejs": "^3.1.10",
     "express": "^4.19.2",
-    "mongoose": "^8.4.1"
+    "mongoose": "^8.4.1",
+    "selenium-webdriver": "^4.33.0"
   }
 }
