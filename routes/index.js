@@ -70,32 +70,15 @@ const getBalanceFull = async (url, delimiterStart, delimiterEnd ,cssSelector) =>
 
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
   
+
+    await driver.get(url);
+
+    // ✅ On attend 5s pour laisser le React rendre le contenu
+    await driver.sleep(5000);
+
+    // On récupère la page complète après rendu
+    const html = await driver.getPageSource();
     
-    //await driver.get(url);
-
-
-    // Juste après avoir lancé la page
-    //await driver.get(url);
-
-    // On attend explicitement que le loader disparaisse (timeout 20 sec ici)
-    //await driver.wait(until.elementIsNotVisible(driver.findElement(By.id("app-loader"))), 20000);
-
-    // Maintenant on est certain que la page a fini de charger
-    //let html = await driver.getPageSource();
-
-await driver.get(url);
-
-// Ajout crucial : attendre que le loader (#app-loader) disparaisse avant de scraper
-await driver.wait(
-  until.elementIsNotVisible(driver.findElement(By.id('app-loader'))), 
-  20000
-);
-
-const html = await driver.getPageSource();
-
-
-    
-    //const html = await driver.getPageSource();
     console.log('\n===== 🧪 HTML complet extrait par Selenium (début) =====');
     console.log(html);
     console.log('=======================================================\n');
